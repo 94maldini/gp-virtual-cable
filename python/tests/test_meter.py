@@ -23,3 +23,10 @@ def test_plan_streams_maps_found_and_missing():
     }
     plan = plan_streams(cfg, found)
     assert [(c.id, i) for c, i in plan] == [("Mono1", 7), ("Stereo1", None), ("Stereo2", None)]
+
+
+def test_row_status_uses_instantaneous_peak():
+    from gpcable.meter import row_status
+    assert row_status(False, 0.0) == "tidak ditemukan"
+    assert row_status(True, -20.0) == "signal"
+    assert row_status(True, -90.0) == "silent"

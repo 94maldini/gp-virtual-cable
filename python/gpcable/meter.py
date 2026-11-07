@@ -33,6 +33,11 @@ def plan_streams(
     return plan
 
 
+def row_status(found: bool, peak_db: float) -> str:
+    """Status text from the instantaneous block peak (not the held value)."""
+    return classify(peak_db) if found else NOT_FOUND
+
+
 def _fmt_db(db: float) -> str:
     return "-inf" if db <= FLOOR_DB else f"{db:.1f}"
 
@@ -66,6 +71,9 @@ class MeterApp:
             st.grid(row=r, column=3)
             self.num_labels.append(num)
             self.status_labels.append(st)
+        self.error_var = tk.StringVar()
+        tk.Label(frame, textvariable=self.error_var, fg="#c33", wraplength=520,
+                 justify="left").grid(row=len(cfg.cables) + 1, column=0, columnspan=4)
         tk.Button(frame, text="Scan ulang", command=self.rescan).grid(
             row=len(cfg.cables), column=0, columnspan=4, pady=(8, 0))
         self.rescan()
@@ -94,10 +102,15 @@ class MeterApp:
         import sounddevice as sd
 
         self._close_streams()
+        found: dict[str, CableDevices] = {}
         try:
+            # PortAudio caches the device list; re-init so new devices appear.
+            sd._terminate()
+            sd._initialize()
             found = find_cable_devices(sd.query_devices(), sd.query_hostapis(), self.cfg)
-        except Exception:
-            found = {}
+            self.error_var.set("")
+        except Exception as e:
+            self.error_var.set(f"Scan gagal: {e}")
         for i, (cable, idx) in enumerate(plan_streams(self.cfg, found)):
             if idx is None:
                 continue
@@ -124,7 +137,7 @@ class MeterApp:
             held = self.holds[i].update(peak, now)
             self.canvases[i].coords(self.bars[i], 0, 0, bar_fraction(peak) * BAR_W, BAR_H)
             self.num_labels[i].config(text=_fmt_db(held))
-            self.status_labels[i].config(text=classify(held))
+            self.status_labels[i].config(text=row_status(True, peak))
         self._job = self.root.after(REFRESH_MS, self.refresh)
 
     def close(self) -> None:
@@ -141,6 +154,7 @@ def main(argv: list[str] | None = None) -> None:
     root = tk.Tk()
     app = MeterApp(root, cfg)
     if args.exit_after is not None:
+        root.after(int(args.exit_after * 500), app.rescan)  # exercise rescan path
         root.after(int(args.exit_after * 1000), app.close)
     root.mainloop()
 
