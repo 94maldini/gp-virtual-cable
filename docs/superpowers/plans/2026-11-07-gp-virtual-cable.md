@@ -115,6 +115,7 @@
   CLI: `python -m gpcable.codegen [--config PATH]` menulis kedua file ke `driver/` dan mencetak path-nya.
 - Nama KS per cable `<id>` (dipakai Task 4, harus persis): `WaveRender<id>`, `TopoRender<id>`, `WaveCapture<id>`, `TopoCapture<id>`. FriendlyName interface topologi dan wave = `name` cable.
 - `cables_generated.h` mendefinisikan: `#define GP_CABLE_COUNT <n>`, satu `static ENDPOINT_MINIPAIR` render + satu capture per cable (DeviceType `eCableRenderDevice`/`eCableCaptureDevice`, nama KS di atas, wave descriptor `CableRenderWaveDescriptorMono|Stereo` / `CableCaptureWaveDescriptorMono|Stereo`, topo descriptor `SpeakerTopoMiniportFilterDescriptor` / `MicArray1TopoMiniportFilterDescriptor`, `DeviceMaxChannels = channels`, format table `CableRenderFormatsMono|Stereo` / `CableCaptureFormatsMono|Stereo`, field baru `CableIndex = index`), serta `g_RenderEndpoints[]` dan `g_CaptureEndpoints[]` dalam urutan indeks, plus `static const ULONG g_GpCableChannels[GP_CABLE_COUNT]`.
+  Fungsi create yang dipakai (nama dari sampel, tidak di-rename): render topo `CreateMiniportTopologySimpleAudioSample`, capture topo `CreateMicArrayMiniportTopology`, wave keduanya `CreateMiniportWaveRTSimpleAudioSample`; physical connection table `SpeakerTopologyPhysicalConnections` / `MicArray1TopologyPhysicalConnections` (dipindah dari `minipairs.h` ke `cablewavtable.h` di Task 4). INX `[Strings]` memuat `KSNAME_<KsName>="<KsName>"` untuk ke-48 nama KS.
 
 - [ ] **Step 1: Tulis test gagal**
   ```python
