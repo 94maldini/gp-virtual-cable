@@ -18,7 +18,7 @@ jadi di PC ini virtual cable adalah satu-satunya cara memisahkan sumber.
   **8 mono** ("GP Mono 1".."GP Mono 8") dan **4 stereo** ("GP Stereo 1".."GP Stereo 4").
 - Tiap cable = 1 endpoint **Playback** + 1 endpoint **Recording**; audio yang diputar ke Playback keluar dari Recording
   pasangannya (loopback), dapat dibuka GP Mix-Lite lewat WASAPI.
-- Format 48 kHz / 24-bit (16-bit sebagai alternatif).
+- Format 48 kHz / 24-bit.
 - **Aplikasi meter** kecil yang menampilkan level tiap cable.
 
 ## Non-tujuan
@@ -54,11 +54,14 @@ jadi di PC ini virtual cable adalah satu-satunya cara memisahkan sumber.
   Pembanding: `github.com/virtualdrivers/virtual-audio-driver`.
 - Satu device root-enumerated `ROOT\GPVirtualCable` → 24 endpoint (12 render + 12 capture).
 - `CableConfig.h`: tabel 12 entri `{index, channels, nama}`; minipair render+capture dibangkitkan dari tabel.
-- `CableBuffer`: ring buffer nonpaged per cable, dilindungi spinlock. Render `WriteBytes` → tulis ke ring;
-  capture `ReadBytes` → baca dari ring; underrun → silence; overrun → timpa data tertua.
-  Render dan capture memakai clock sistem yang sama → tidak ada drift. Ukuran awal ±20 ms.
-- Format tetap per cable: 48000 Hz, 24-bit (16-bit alternatif), channel 1 atau 2.
-- Nama endpoint di `[Strings]` INF.
+- `CableBuffer`: ring buffer nonpaged per cable, dilindungi spinlock. Di sampel, `ReadBytes` adalah sisi render
+  (membaca buffer DMA) → salin ke ring; `WriteBytes` adalah sisi capture (mengisi buffer DMA) → ambil dari ring;
+  underrun → silence; overrun → timpa data tertua.
+  Render dan capture memakai clock sistem yang sama → tidak ada drift. Kapasitas ring 100 ms.
+- Format tunggal per endpoint: 48000 Hz, 24-bit, channel 1 atau 2 (satu format saja supaya render dan capture
+  satu cable selalu identik).
+- Konfigurasi cable di `cables.toml` (sumber tunggal); generator Python membuat tabel minipair C dan INX.
+  Nama endpoint ada di `[Strings]` INF; nama yang tampil di Windows memuat nama cable, misalnya "Speakers (GP Mono 1)".
 
 ### Instalasi
 - Skrip PowerShell: `enable-testsigning.ps1`, `install.ps1` (devcon dari WDK), `uninstall.ps1`.
@@ -77,6 +80,8 @@ jadi di PC ini virtual cable adalah satu-satunya cara memisahkan sumber.
 ## Diserahkan ke builder (keputusan Claude)
 
 - Basis sampel Microsoft, bukan fork pihak ketiga.
-- Ukuran ring buffer awal ±20 ms; 16-bit sebagai format alternatif.
+- Kapasitas ring buffer 100 ms; format 16-bit dihapus (satu format 24-bit saja).
+- INF sampel menargetkan Windows 11 (`10.0...22000`); diturunkan ke `10.0...19041` untuk Windows 10.
+- `cables.toml` + generator Python sebagai sumber tunggal nama/jumlah cable.
 - PySide6 untuk GUI meter.
 - Detail struktur kode di dalam proyek driver mengikuti sampel.
