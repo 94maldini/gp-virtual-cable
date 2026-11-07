@@ -68,7 +68,7 @@ jadi di PC ini virtual cable adalah satu-satunya cara memisahkan sumber.
 - Disarankan tes pertama di VM Hyper-V atau minimal System Restore point.
 
 ### Aplikasi meter
-- Python 3 + `sounddevice` (WASAPI shared) + `numpy` + `PySide6`.
+- Python 3 + `sounddevice` (WASAPI shared) + `numpy` + `tkinter` (bawaan Python, hemat ruang disk).
 - Logika level (peak/RMS dBFS, peak hold, decay) di modul terpisah, di-unit-test dengan pytest.
 - Status per cable: ada sinyal / diam / endpoint tidak ditemukan.
 
@@ -83,5 +83,5 @@ jadi di PC ini virtual cable adalah satu-satunya cara memisahkan sumber.
 - Kapasitas ring buffer 100 ms; format 16-bit dihapus (satu format 24-bit saja).
 - INF sampel menargetkan Windows 11 (`10.0...22000`); diturunkan ke `10.0...19041` untuk Windows 10.
 - `cables.toml` + generator Python sebagai sumber tunggal nama/jumlah cable.
-- PySide6 untuk GUI meter.
+- tkinter untuk GUI meter (dipilih karena ruang disk C: terbatas).
 - Detail struktur kode di dalam proyek driver mengikuti sampel.

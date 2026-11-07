@@ -22,7 +22,7 @@ Semua tool harus dipasang di **C:**; drive lain praktis penuh.
 | Windows SDK 10.0.26100 | 2–3 GB |
 | WDK 10.0.26100 | 1–2 GB |
 | Cache unduhan sementara saat instalasi | 2–4 GB (bisa dihapus) |
-| Library Python (numpy, sounddevice, PySide6) | ±0,6 GB |
+| Library Python (numpy, sounddevice) | ±0,1 GB |
 | **Total setelah instalasi** | **±9–12 GB** (sempat ±15 GB saat proses instal) |
 
 Sisa ruang C: setelah instalasi diperkirakan hanya ±10 GB.
@@ -59,9 +59,9 @@ Persiapan VM:
 
 Secure Boot **PC utama** baru perlu dimatikan saat driver dipasang di PC utama.
 
-## Usulan yang menunggu keputusan
+## Keputusan
 
-- **Aplikasi meter pakai tkinter** (bawaan Python) sebagai ganti PySide6, hemat ±0,4 GB, tampilan lebih sederhana.
+- Aplikasi meter memakai **tkinter** (bawaan Python), bukan PySide6 — hemat ±0,4 GB.
 
 ## Yang tetap wajib
 

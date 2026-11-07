@@ -6,7 +6,7 @@
 
 **Architecture:** Fork sampel Microsoft `audio/simpleaudiosample` (PortCls WaveRT). Satu device `Root\GPVirtualCable` mendaftarkan 24 endpoint (render+capture per cable); render stream menyalin data DMA ke ring buffer per cable, capture stream membacanya. Satu file konfigurasi `cables.toml` menjadi sumber kebenaran; generator Python membuat tabel minipair C dan file INX. Paket Python `gpcable` juga berisi tes loopback end-to-end dan aplikasi meter.
 
-**Tech Stack:** C++ / WDK (PortCls, WaveRT), Visual Studio 2022, PowerShell, Python 3.13 (`tomllib`, `numpy`, `sounddevice`, `PySide6`, `pytest`).
+**Tech Stack:** C++ / WDK (PortCls, WaveRT), Visual Studio 2022, PowerShell, Python 3.13 (`tomllib`, `numpy`, `sounddevice`, `tkinter` (bawaan), `pytest`).
 
 **Spec:** `docs/superpowers/specs/2026-11-07-gp-virtual-cable-design.md`
 
@@ -88,7 +88,7 @@
 
 **Files:**
 - Create: `cables.toml`
-- Create: `python/pyproject.toml` (paket `gpcable`, Python ≥3.11; deps: `numpy`, `sounddevice`, `PySide6`; dev: `pytest`)
+- Create: `python/pyproject.toml` (paket `gpcable`, Python ≥3.11; deps: `numpy`, `sounddevice`; dev: `pytest`)
 - Create: `python/gpcable/__init__.py`, `python/gpcable/config.py`, `python/gpcable/codegen.py`
 - Create: `python/gpcable/templates/GPVirtualCable.inx.in` (dibuat di Task 4 dari INX sampel; di task ini cukup template minimal untuk tes)
 - Test: `python/tests/test_config.py`, `python/tests/test_codegen.py`
@@ -258,12 +258,12 @@
 
 **Interfaces:**
 - Consumes: `load_config`, `default_config_path` (Task 3); `find_cable_devices` (Task 5); `peak_dbfs`, `rms_dbfs`, `PeakHold`, `classify` (Task 6).
-- Perilaku: satu baris per cable (urutan `cables.toml`): nama, bar level peak (−60..0 dBFS), angka peak-hold, status `signal` / `silent` / `tidak ditemukan`. Satu `sounddevice.InputStream` shared-mode per cable yang ditemukan (`extra_settings=sd.WasapiSettings(exclusive=False)`); callback hanya menyimpan peak/RMS blok terakhir (tanpa alokasi berat); `QTimer` 30 Hz memperbarui UI. Tombol "Scan ulang" menutup dan membuka ulang stream. Error membuka satu stream → baris itu `tidak ditemukan`, cable lain tetap jalan.
+- Perilaku: satu baris per cable (urutan `cables.toml`): nama, bar level peak (−60..0 dBFS), angka peak-hold, status `signal` / `silent` / `tidak ditemukan`. Satu `sounddevice.InputStream` shared-mode per cable yang ditemukan (`extra_settings=sd.WasapiSettings(exclusive=False)`); callback hanya menyimpan peak/RMS blok terakhir (tanpa alokasi berat); `root.after(33, ...)` (±30 Hz) memperbarui UI; bar level digambar di `tkinter.Canvas`. Tombol "Scan ulang" menutup dan membuka ulang stream. Error membuka satu stream → baris itu `tidak ditemukan`, cable lain tetap jalan.
 
 - [ ] **Step 1: Implementasikan `meter.py`** sesuai perilaku di atas.
 - [ ] **Step 2: Smoke test** — Run: `cd python; python -m gpcable.meter` sambil `python -m gpcable.loopback` berjalan · Expected: tiap cable menyala `signal` bergiliran; cable diam `silent`; jendela tetap responsif.
 - [ ] **Step 3: Cek tidak mengganggu GP Mix** — dengan GP Mix-Lite membuka "GP Stereo 1" via WASAPI, buka meter → GP Mix tetap menerima audio tanpa putus.
-- [ ] **Step 4: Commit** — `git commit -m "feat(meter): aplikasi meter PySide6 untuk 12 cable"`
+- [ ] **Step 4: Commit** — `git commit -m "feat(meter): aplikasi meter tkinter untuk 12 cable"`
 
 ### Task 8: Soak test + panduan pemakaian
 
