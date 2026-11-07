@@ -65,25 +65,29 @@ def record(
         chunks.append(indata.copy())
 
     out = None
-    if freq_hz is not None:
-        out = sd.OutputStream(
-            device=devs.output_index, samplerate=play_rate, channels=play_channels,
-            dtype="float32", callback=out_cb, extra_settings=wasapi,
-        )
-    inp = sd.InputStream(
-        device=devs.input_index, samplerate=REC_RATE, channels=cable.channels,
-        dtype="float32", callback=in_cb, extra_settings=wasapi,
-    )
+    inp = None
     try:
+        if freq_hz is not None:
+            out = sd.OutputStream(
+                device=devs.output_index, samplerate=play_rate, channels=play_channels,
+                dtype="float32", callback=out_cb, extra_settings=wasapi,
+            )
+        inp = sd.InputStream(
+            device=devs.input_index, samplerate=REC_RATE, channels=cable.channels,
+            dtype="float32", callback=in_cb, extra_settings=wasapi,
+        )
         if out is not None:
             out.start()
             time.sleep(0.3)  # let playback settle before recording
         inp.start()
         time.sleep(DISCARD_S + seconds)
     finally:
-        inp.close()
-        if out is not None:
-            out.close()
+        try:
+            if inp is not None:
+                inp.close()
+        finally:
+            if out is not None:
+                out.close()
     if not chunks:
         raise RuntimeError(f"{cable.name}: no audio captured")
     rec = np.concatenate(chunks)

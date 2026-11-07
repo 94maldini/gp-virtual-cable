@@ -33,11 +33,43 @@ function Find-Devcon {
     exit 1
 }
 
-# Mengembalikan $true bila Root\GPVirtualCable sudah terpasang.
+# Mengembalikan $true bila teks keluaran 'devcon hwids' memuat hardware ID Root\GPVirtualCable.
+# Pola di-escape: '\G' bila tidak di-escape adalah anchor regex .NET.
+function Test-HwidsOutput {
+    param([string]$Text)
+    $pattern = '(?im)^\s+' + [regex]::Escape('Root\GPVirtualCable') + '\s*$'
+    return ($Text -match $pattern)
+}
+
 # devcon hwids dapat mengembalikan kode keluar bukan-nol saat tidak ada yang cocok,
 # jadi keputusan diambil dari isi keluaran, bukan dari $LASTEXITCODE.
 function Test-DeviceInstalled {
     param([string]$Devcon)
     $out = & $Devcon hwids 'Root\GPVirtualCable' 2>&1 | Out-String
-    return ($out -match '(?im)^\s+Root\GPVirtualCable\s*$')
+    return (Test-HwidsOutput -Text $out)
+}
+
+# Menilai kode keluar alat native. devcon: 0 = ok, 1 = ok tetapi perlu reboot, 2 = gagal.
+# pnputil: 0 = ok, 3010 = ok tetapi perlu reboot. Mengembalikan 'ok', 'reboot', atau 'fail'.
+function Get-ExitStatus {
+    param([ValidateSet('devcon','pnputil')][string]$Tool, [int]$Code)
+    if ($Code -eq 0) { return 'ok' }
+    if ($Tool -eq 'devcon' -and $Code -eq 1) { return 'reboot' }
+    if ($Tool -eq 'pnputil' -and $Code -eq 3010) { return 'reboot' }
+    return 'fail'
+}
+
+# Cetak hasil; keluar dengan 1 bila gagal. Mengembalikan $true bila perlu reboot.
+function Assert-ExitOk {
+    param([string]$Tool, [int]$Code, [string]$What)
+    $st = Get-ExitStatus -Tool $Tool -Code $Code
+    if ($st -eq 'fail') {
+        Write-Host "ERROR: $What gagal (kode $Code)." -ForegroundColor Red
+        exit 1
+    }
+    if ($st -eq 'reboot') {
+        Write-Host "CATATAN: $What berhasil tetapi Windows meminta REBOOT." -ForegroundColor Yellow
+        return $true
+    }
+    return $false
 }

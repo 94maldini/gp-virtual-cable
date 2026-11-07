@@ -5,14 +5,12 @@ param(
 . "$PSScriptRoot\common.ps1"
 Assert-Admin
 
+$reboot = $false
 $devcon = Find-Devcon -DevconPath $DevconPath -SearchDirs @($PackageDir, $PSScriptRoot)
 
 if (Test-DeviceInstalled -Devcon $devcon) {
     & $devcon remove 'Root\GPVirtualCable'
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR: devcon remove gagal (kode $LASTEXITCODE)." -ForegroundColor Red
-        exit 1
-    }
+    if (Assert-ExitOk -Tool 'devcon' -Code $LASTEXITCODE -What 'devcon remove') { $reboot = $true }
 } else {
     Write-Host "Perangkat Root\GPVirtualCable tidak terpasang, lewati devcon remove."
 }
@@ -37,9 +35,7 @@ if ($published.Count -eq 0) {
 foreach ($oem in $published) {
     Write-Host "Menghapus paket $oem ..."
     & pnputil /delete-driver $oem /uninstall /force
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR: pnputil /delete-driver $oem gagal (kode $LASTEXITCODE)." -ForegroundColor Red
-        exit 1
-    }
+    if (Assert-ExitOk -Tool 'pnputil' -Code $LASTEXITCODE -What "pnputil /delete-driver $oem") { $reboot = $true }
 }
+if ($reboot) { Write-Host "Reboot Windows untuk menyelesaikan uninstall." -ForegroundColor Yellow }
 Write-Host "Uninstall selesai." -ForegroundColor Green

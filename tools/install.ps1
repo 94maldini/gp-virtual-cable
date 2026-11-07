@@ -47,8 +47,6 @@ if (Test-DeviceInstalled -Devcon $devcon) {
     Write-Host "Menjalankan devcon install..."
     & $devcon install $inf 'Root\GPVirtualCable'
 }
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: devcon gagal (kode $LASTEXITCODE)." -ForegroundColor Red
-    exit 1
-}
+$reboot = Assert-ExitOk -Tool 'devcon' -Code $LASTEXITCODE -What 'devcon'
+if ($reboot) { Write-Host "Reboot Windows lalu periksa perangkat." -ForegroundColor Yellow }
 Write-Host "Selesai. Periksa Device Manager ('GP Virtual Cable') dan mmsys.cpl." -ForegroundColor Green

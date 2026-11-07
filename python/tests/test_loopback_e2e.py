@@ -21,9 +21,15 @@ def test_every_cable_loops_back(cfg, devs):
 
 def test_no_crosstalk(cfg, devs):
     stereo, mono = _cable(cfg, "Stereo1"), _cable(cfg, "Mono1")
+    freq = tone_freq(stereo)
+    # Positive control: Stereo1 itself must loop back the tone while Mono1 stays silent.
+    # Then play to Stereo1 again while recording Mono1 (crosstalk).
+    r = run_loopback(stereo, devs[stereo.id], freq)
+    assert abs(r.peak_freq_hz - freq) < 5
+    assert r.level_dbfs > -20
     played = devs[stereo.id]
     rec = record(mono, CableDevices(devs[mono.id].input_index, played.output_index),
-                 tone_freq(stereo))
+                 freq, play_channels=stereo.channels)
     assert analyse(rec)[1] < -90
 
 
