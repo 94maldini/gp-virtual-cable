@@ -19,6 +19,7 @@
 - Kapasitas ring buffer per cable: 100 ms (`48000 * 3 * channels / 10` byte).
 - Instalasi hanya via test-signing (`bcdedit /set testsigning on`, Secure Boot OFF). Tidak ada signing produksi.
 - Aplikasi meter membuka endpoint dalam WASAPI **shared mode** saja.
+- Lingkungan uji: pertama **VM Windows 11 di VMware Workstation** (Secure Boot VM dimatikan), baru kemudian PC utama Windows 10 19045 setelah System Restore point. Detail di `docs/setup-notes.md`.
 - Commit di branch `feat/gp-virtual-cable`; pesan commit diakhiri `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## Review Focus
@@ -215,7 +216,7 @@
   def test_mono_cable_accepts_stereo_44k(cfg, devs): # play_rate=44100, play_channels=2 ke Mono2 → |peak - freq| < 5 Hz
   ```
   lalu implementasikan `loopback.py` (`sounddevice.playrec` tidak bisa lintas device → jalankan `OutputStream` dan `InputStream` bersamaan, buang 200 ms pertama, FFT `numpy.fft.rfft` dengan jendela Hann).
-- [ ] **Step 6: Pengguna menginstal di VM/PC uji** (admin): `tools\enable-testsigning.ps1` → reboot → `tools\install.ps1`. Verifikasi: Device Manager menampilkan "GP Virtual Cable"; `mmsys.cpl` menampilkan 12 entri Playback dan 12 Recording yang namanya memuat "GP Mono 1".."GP Stereo 4".
+- [ ] **Step 6: Pengguna menginstal di VM Windows 11 (VMware)** (admin): `tools\enable-testsigning.ps1` → reboot → `tools\install.ps1`. Verifikasi: Device Manager menampilkan "GP Virtual Cable"; `mmsys.cpl` menampilkan 12 entri Playback dan 12 Recording yang namanya memuat "GP Mono 1".."GP Stereo 4".
 - [ ] **Step 7: Jalankan e2e** — Run: `cd python; python -m gpcable.loopback; python -m pytest -q -m e2e` · Expected: `12/12 passed`, semua test e2e PASS.
 - [ ] **Step 8: Commit** — `git commit -m "feat: skrip install + tes loopback end-to-end"`
 
@@ -269,7 +270,7 @@
 **Files:**
 - Create: `README.md` (bahasa Indonesia: apa ini, prasyarat, build, test-signing + Secure Boot, install/uninstall, ganti nama cable via `cables.toml` → codegen → build → `install.ps1`, setup GP Mix-Lite (WASAPI input dari "GP …") → OBS, menjalankan meter, troubleshooting)
 
-- [ ] **Step 1: Driver Verifier di VM** — Run (admin): `verifier /standard /driver GPVirtualCable.sys` → reboot → putar audio ke 4 cable sekaligus + meter terbuka ±1 jam, termasuk sleep/resume sekali. Expected: tidak ada BSOD; `python -m gpcable.loopback` tetap `12/12 passed` sesudahnya. Lalu `verifier /reset`.
-- [ ] **Step 2: Uji nyata** — Discord → GP Stereo 3, Spotify → GP Stereo 2, mic → GP Mono 1; ketiganya muncul sebagai channel terpisah di GP Mix-Lite; mix keluar ke OBS dan terekam.
+- [ ] **Step 1: Driver Verifier di VM Windows 11 (VMware)** — Run (admin): `verifier /standard /driver GPVirtualCable.sys` → reboot → putar audio ke 4 cable sekaligus + meter terbuka ±1 jam, termasuk sleep/resume sekali. Expected: tidak ada BSOD; `python -m gpcable.loopback` tetap `12/12 passed` sesudahnya. Lalu `verifier /reset`.
+- [ ] **Step 2: Uji nyata di PC utama** (buat System Restore point dulu, matikan Secure Boot, `enable-testsigning.ps1`, `install.ps1`) — Discord → GP Stereo 3, Spotify → GP Stereo 2, mic → GP Mono 1; ketiganya muncul sebagai channel terpisah di GP Mix-Lite; mix keluar ke OBS dan terekam.
 - [ ] **Step 3: Tulis `README.md`**.
 - [ ] **Step 4: Commit** — `git commit -m "docs: README instalasi dan setup GP Mix-Lite + OBS"`

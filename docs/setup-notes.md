@@ -40,13 +40,30 @@ Di tab **Installation locations**: hilangkan centang **"Keep download cache afte
 
 Setelah itu pasang **WDK 10.0.26100** dari halaman resmi Microsoft "Download the Windows Driver Kit".
 
-## Konsekuensi untuk rencana (usulan, menunggu keputusan)
+## Lingkungan uji
 
-1. **VM Hyper-V tidak muat** (Windows 10 di VM butuh 20 GB lebih).
-   Usulan: tes langsung di PC ini setelah membuat **System Restore point**, atau pakai PC/laptop lain bila ada.
-2. **Aplikasi meter pakai tkinter** (bawaan Python) sebagai ganti PySide6, hemat ±0,4 GB, tampilan lebih sederhana.
+Pengguna **sudah punya VM Windows 11 di VMware Workstation** → tidak perlu VM baru (tidak makan ruang disk tambahan).
+
+Urutan uji:
+1. **VM Windows 11 (VMware)** — uji pertama driver, tes loopback, Driver Verifier. BSOD di sini tidak merusak PC utama.
+2. **PC utama Windows 10 19045** — setelah lulus di VM; buat **System Restore point** dulu, lalu uji dengan GP Mix-Lite + OBS.
+
+Driver yang sama jalan di keduanya (INF menargetkan `10.0...19041`, Windows 11 = build 22000+).
+
+Persiapan VM:
+- Matikan **Secure Boot di VM**: VM Settings → Options → Advanced → hilangkan centang *Enable secure boot* (VM dalam keadaan mati).
+- Kalau VM memakai enkripsi (BitLocker/Device Encryption, vTPM), **suspend BitLocker dulu** atau siapkan recovery key sebelum mengubah pengaturan boot.
+- Pastikan **VMware Tools** terpasang (untuk shared folder / drag-drop paket driver dari host ke VM).
+- Di dalam VM: `bcdedit /set testsigning on` lalu reboot; pasang Python 3 (±100 MB + numpy/sounddevice) untuk tes loopback.
+- Opsional: kernel debugging dari host ke VM (kdnet) untuk menganalisis BSOD.
+
+Secure Boot **PC utama** baru perlu dimatikan saat driver dipasang di PC utama.
+
+## Usulan yang menunggu keputusan
+
+- **Aplikasi meter pakai tkinter** (bawaan Python) sebagai ganti PySide6, hemat ±0,4 GB, tampilan lebih sederhana.
 
 ## Yang tetap wajib
 
-- **Secure Boot dimatikan** di BIOS agar test-signing bisa aktif.
+- **Secure Boot dimatikan** (di VM, lalu di BIOS PC utama) agar test-signing bisa aktif.
 - Instalasi toolchain dan driver butuh admin — dijalankan oleh pengguna.
