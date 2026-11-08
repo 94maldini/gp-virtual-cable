@@ -75,8 +75,8 @@ def test_shared_channel_mixes(cfg, devmap):
 def test_latency_does_not_accumulate(cfg, devmap):
     stereo2 = _cable(cfg, "Stereo2")
     out = _out(devmap, stereo2)
-    record_route(out, devmap.capture, [(0, 440.0), (1, 440.0)], 2, preroll_s=2.0)
-    assert measure_latency_ms(out, devmap.capture, 2, stereo2.first_channel) <= 30
+    latency = measure_latency_ms(out, devmap.capture, 2, stereo2.first_channel, preroll_s=2.0)
+    assert 0 < latency <= 30
 
 
 def test_stereo_cable_accepts_mono_44k(cfg, devmap):

@@ -96,21 +96,39 @@ def record_route(
     return rec[int(DISCARD_S * REC_RATE):]
 
 
-def measure_latency_ms(out_idx: int, cap_idx: int, channels_out: int, first_channel: int) -> float:
+def first_onset_time(
+    chunk: np.ndarray, adc_time: float, rate: int, threshold_db: float, not_before: float
+) -> float | None:
+    """Time of the first sample in a 1-D chunk that exceeds threshold_db and whose
+    timestamp (adc_time + index / rate) is >= not_before; None if there is none.
+    Earlier loud samples (noise, leftover audio) are skipped."""
+    thresh = 10 ** (threshold_db / 20)
+    idx = np.nonzero(np.abs(chunk) > thresh)[0]
+    times = adc_time + idx / rate
+    ok = np.nonzero(times >= not_before)[0]
+    return float(times[ok[0]]) if ok.size else None
+
+
+def measure_latency_ms(
+    out_idx: int, cap_idx: int, channels_out: int, first_channel: int, preroll_s: float = 0.0
+) -> float:
     """Latency from playing a burst to hearing it on capture channel first_channel-1.
 
-    Output plays silence, then (after ~0.5 s) a 1 kHz burst on every output
-    channel. The output callback stores the DAC time of the burst's first frame
-    (time_info.outputBufferDacTime + offset); the input callback finds the first
-    sample above -40 dBFS on the target channel and takes its time as
-    time_info.inputBufferAdcTime + offset. Both times use the same PortAudio
-    stream clock, so latency = adc_onset - dac_start (milliseconds)."""
+    One output stream is opened first and plays continuously: a quiet 440 Hz tone
+    on every output channel for `preroll_s` seconds (no input stream open, so any
+    backlog the driver builds up during that time stays in the stream), then
+    silence. Only after the preroll is the input stream opened; ~0.5 s later the
+    output plays a 1 kHz burst. The output callback stores the DAC time of the
+    burst's first frame (time_info.outputBufferDacTime + offset); the input
+    callback takes the first sample >= -40 dBFS on the target channel whose time
+    is not earlier than that, as time_info.inputBufferAdcTime + offset. Both use
+    the same PortAudio stream clock, so latency = adc_onset - dac_start (ms)."""
     wasapi = sd.WasapiSettings(auto_convert=True)
-    thresh = 10 ** (ONSET_DBFS / 20)
     target = first_channel - 1
-    burst_start = int(0.5 * REC_RATE)
+    preroll_n = int(preroll_s * REC_RATE)
     burst_len = int(0.3 * REC_RATE)
     pos = [0]
+    burst_at: list[int | None] = [None]
     dac_start: list[float | None] = [None]
     adc_onset: list[float | None] = [None]
     done = threading.Event()
@@ -119,24 +137,29 @@ def measure_latency_ms(out_idx: int, cap_idx: int, channels_out: int, first_chan
         outdata[:] = 0
         n0 = pos[0]
         idx = np.arange(n0, n0 + frames)
-        mask = (idx >= burst_start) & (idx < burst_start + burst_len)
-        if mask.any():
-            if dac_start[0] is None:
-                first = int(np.argmax(mask))
-                dac_start[0] = time_info.outputBufferDacTime + first / REC_RATE
-            tone = AMPLITUDE * np.sin(2 * np.pi * 1000.0 * idx / REC_RATE)
-            outdata[mask, :] = tone[mask, None].astype(np.float32)
+        pre = idx < preroll_n
+        if pre.any():
+            quiet = 0.1 * np.sin(2 * np.pi * 440.0 * idx / REC_RATE)
+            outdata[pre, :] = quiet[pre, None].astype(np.float32)
+        start = burst_at[0]
+        if start is not None:
+            mask = (idx >= start) & (idx < start + burst_len)
+            if mask.any():
+                if dac_start[0] is None:
+                    first = int(np.argmax(mask))
+                    dac_start[0] = time_info.outputBufferDacTime + first / REC_RATE
+                tone = AMPLITUDE * np.sin(2 * np.pi * 1000.0 * idx / REC_RATE)
+                outdata[mask, :] = tone[mask, None].astype(np.float32)
         pos[0] += frames
 
     def in_cb(indata, frames, time_info, status):
         if dac_start[0] is None or adc_onset[0] is not None:
             return
-        hits = np.nonzero(np.abs(indata[:, target]) > thresh)[0]
-        if hits.size:
-            t = time_info.inputBufferAdcTime + hits[0] / REC_RATE
-            if t >= dac_start[0]:
-                adc_onset[0] = t
-                done.set()
+        t = first_onset_time(indata[:, target], time_info.inputBufferAdcTime,
+                             REC_RATE, ONSET_DBFS, dac_start[0])
+        if t is not None:
+            adc_onset[0] = t
+            done.set()
 
     out = None
     inp = None
@@ -145,12 +168,15 @@ def measure_latency_ms(out_idx: int, cap_idx: int, channels_out: int, first_chan
             device=out_idx, samplerate=REC_RATE, channels=channels_out,
             dtype="float32", callback=out_cb, extra_settings=wasapi,
         )
+        out.start()
+        if preroll_s > 0:
+            time.sleep(preroll_s)
         inp = sd.InputStream(
             device=cap_idx, samplerate=REC_RATE, channels=CAPTURE_CHANNELS,
             dtype="float32", callback=in_cb, extra_settings=wasapi,
         )
         inp.start()
-        out.start()
+        burst_at[0] = max(pos[0], preroll_n) + int(0.5 * REC_RATE)
         if not done.wait(timeout=3.0):
             raise RuntimeError("latency: burst onset not detected on capture channel")
     finally:
