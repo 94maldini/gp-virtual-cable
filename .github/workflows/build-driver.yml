@@ -38,3 +38,24 @@ jobs:
         run: |
           Get-ChildItem driver -Recurse -Include *.sys,*.inf,*.cat,*.cer,*.pfx | ForEach-Object { "{0}  {1}" -f $_.FullName, $_.Length }
           Get-ChildItem driver\packages -Recurse -Filter devcon.exe | ForEach-Object { "devcon: " + $_.FullName }
+
+      - name: Kumpulkan artefak
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force stage | Out-Null
+          $pkg = Get-ChildItem driver -Recurse -Filter SimpleAudioSample.sys | Where-Object { $_.DirectoryName -like '*package*' } | Select-Object -First 1
+          if (-not $pkg) { throw 'SimpleAudioSample.sys di folder package tidak ditemukan' }
+          Write-Host "package dir: $($pkg.DirectoryName)"
+          Copy-Item "$($pkg.DirectoryName)\*" stage -Recurse -Force
+          $cer = Get-ChildItem driver -Recurse -Filter *.cer | Select-Object -First 1
+          if ($cer) { Copy-Item $cer.FullName stage -Force } else { Write-Host 'PERINGATAN: .cer tidak ditemukan' }
+          $dev = Get-ChildItem driver\packages -Recurse -Filter devcon.exe | Where-Object { $_.FullName -match 'x64' } | Select-Object -First 1
+          if ($dev) { Write-Host "devcon dari NuGet: $($dev.FullName)"; Copy-Item $dev.FullName stage -Force } else { Write-Host 'devcon.exe tidak ada di paket NuGet' }
+          Get-ChildItem stage -Recurse | ForEach-Object { '{0}  {1}' -f $_.FullName, $_.Length }
+          Get-ChildItem stage\*.cat | ForEach-Object { Get-AuthenticodeSignature $_.FullName | Format-List Status,StatusMessage,SignerCertificate }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gp-virtual-cable-driver
+          path: stage
+          if-no-files-found: error
