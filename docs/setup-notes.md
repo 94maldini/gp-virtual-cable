@@ -1,5 +1,7 @@
 # Catatan Persiapan — GP Virtual Cable
 
+> **Update 2026-11-08:** Visual Studio + WDK **tidak perlu dipasang di PC**. Driver di-build di GitHub Actions (repo private) memakai WDK dari NuGet. Bagian "Cara instal hemat" di bawah hanya berlaku kalau suatu saat ingin build lokal.
+
 Dicatat: 2026-11-07
 
 ## Ruang disk PC (dicek 2026-11-07)
