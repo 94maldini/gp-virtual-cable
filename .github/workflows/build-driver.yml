@@ -4,7 +4,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  core-tests:
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tes ring buffer + mixer (user-mode)
+        shell: pwsh
+        run: |
+          .	ools	est-gpcore.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
   build:
+    needs: core-tests
     runs-on: windows-2025-vs2026
     steps:
       - uses: actions/checkout@v4
