@@ -16,6 +16,10 @@ typedef struct _GP_CABLE_ROUTE
 
 // Cable 0: Mono1
 
+// Name GUID pin bridge -> MediaCategories: GP Mono 1
+static const GUID GpPinNameMono1 = { 0x9193b6a1, 0x2bf1, 0x51bf, { 0x86, 0xf2, 0x2d, 0xb6, 0x1b, 0xa6, 0x90, 0x2a } };  // {9193B6A1-2BF1-51BF-86F2-2DB61BA6902A}
+GP_DEFINE_RENDER_TOPO(Mono1, GpPinNameMono1)
+
 static
 ENDPOINT_MINIPAIR GpRenderMono1 =
 {
@@ -23,7 +27,7 @@ ENDPOINT_MINIPAIR GpRenderMono1 =
     L"TopoRenderMono1",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorMono1,
     0, NULL,                                // Interface properties
     L"WaveRenderMono1",
     NULL,                                   // optional template name
@@ -42,6 +46,10 @@ ENDPOINT_MINIPAIR GpRenderMono1 =
 
 // Cable 1: Mono2
 
+// Name GUID pin bridge -> MediaCategories: GP Mono 2
+static const GUID GpPinNameMono2 = { 0x9708f7f3, 0x6d56, 0x5146, { 0xb1, 0xce, 0x78, 0x23, 0x4c, 0xe4, 0x82, 0x1c } };  // {9708F7F3-6D56-5146-B1CE-78234CE4821C}
+GP_DEFINE_RENDER_TOPO(Mono2, GpPinNameMono2)
+
 static
 ENDPOINT_MINIPAIR GpRenderMono2 =
 {
@@ -49,7 +57,7 @@ ENDPOINT_MINIPAIR GpRenderMono2 =
     L"TopoRenderMono2",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorMono2,
     0, NULL,                                // Interface properties
     L"WaveRenderMono2",
     NULL,                                   // optional template name
@@ -68,6 +76,10 @@ ENDPOINT_MINIPAIR GpRenderMono2 =
 
 // Cable 2: Mono3
 
+// Name GUID pin bridge -> MediaCategories: GP Mono 3
+static const GUID GpPinNameMono3 = { 0x62021095, 0x290d, 0x5b7b, { 0xbe, 0x9b, 0xaf, 0x5a, 0xa6, 0x36, 0x72, 0x59 } };  // {62021095-290D-5B7B-BE9B-AF5AA6367259}
+GP_DEFINE_RENDER_TOPO(Mono3, GpPinNameMono3)
+
 static
 ENDPOINT_MINIPAIR GpRenderMono3 =
 {
@@ -75,7 +87,7 @@ ENDPOINT_MINIPAIR GpRenderMono3 =
     L"TopoRenderMono3",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorMono3,
     0, NULL,                                // Interface properties
     L"WaveRenderMono3",
     NULL,                                   // optional template name
@@ -94,6 +106,10 @@ ENDPOINT_MINIPAIR GpRenderMono3 =
 
 // Cable 3: Mono4
 
+// Name GUID pin bridge -> MediaCategories: GP Mono 4
+static const GUID GpPinNameMono4 = { 0xac8060bb, 0x1e8f, 0x5262, { 0xb3, 0xdf, 0x93, 0xb5, 0x80, 0x07, 0xa3, 0xd9 } };  // {AC8060BB-1E8F-5262-B3DF-93B58007A3D9}
+GP_DEFINE_RENDER_TOPO(Mono4, GpPinNameMono4)
+
 static
 ENDPOINT_MINIPAIR GpRenderMono4 =
 {
@@ -101,7 +117,7 @@ ENDPOINT_MINIPAIR GpRenderMono4 =
     L"TopoRenderMono4",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorMono4,
     0, NULL,                                // Interface properties
     L"WaveRenderMono4",
     NULL,                                   // optional template name
@@ -120,6 +136,10 @@ ENDPOINT_MINIPAIR GpRenderMono4 =
 
 // Cable 4: Mono5
 
+// Name GUID pin bridge -> MediaCategories: GP Mono 5
+static const GUID GpPinNameMono5 = { 0x21b03cc9, 0xc62f, 0x5c4e, { 0x86, 0x18, 0x96, 0x55, 0x61, 0x16, 0xb2, 0xe0 } };  // {21B03CC9-C62F-5C4E-8618-96556116B2E0}
+GP_DEFINE_RENDER_TOPO(Mono5, GpPinNameMono5)
+
 static
 ENDPOINT_MINIPAIR GpRenderMono5 =
 {
@@ -127,7 +147,7 @@ ENDPOINT_MINIPAIR GpRenderMono5 =
     L"TopoRenderMono5",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorMono5,
     0, NULL,                                // Interface properties
     L"WaveRenderMono5",
     NULL,                                   // optional template name
@@ -146,6 +166,10 @@ ENDPOINT_MINIPAIR GpRenderMono5 =
 
 // Cable 5: Mono6
 
+// Name GUID pin bridge -> MediaCategories: GP Mono 6
+static const GUID GpPinNameMono6 = { 0x50ef51c4, 0xa07c, 0x5305, { 0x96, 0xda, 0x82, 0x33, 0xfd, 0x9d, 0x57, 0x91 } };  // {50EF51C4-A07C-5305-96DA-8233FD9D5791}
+GP_DEFINE_RENDER_TOPO(Mono6, GpPinNameMono6)
+
 static
 ENDPOINT_MINIPAIR GpRenderMono6 =
 {
@@ -153,7 +177,7 @@ ENDPOINT_MINIPAIR GpRenderMono6 =
     L"TopoRenderMono6",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorMono6,
     0, NULL,                                // Interface properties
     L"WaveRenderMono6",
     NULL,                                   // optional template name
@@ -172,6 +196,10 @@ ENDPOINT_MINIPAIR GpRenderMono6 =
 
 // Cable 6: Mono7
 
+// Name GUID pin bridge -> MediaCategories: GP Mono 7
+static const GUID GpPinNameMono7 = { 0xb3be2591, 0x572c, 0x5709, { 0x84, 0xb2, 0x7c, 0x96, 0xe9, 0x77, 0x49, 0xc1 } };  // {B3BE2591-572C-5709-84B2-7C96E97749C1}
+GP_DEFINE_RENDER_TOPO(Mono7, GpPinNameMono7)
+
 static
 ENDPOINT_MINIPAIR GpRenderMono7 =
 {
@@ -179,7 +207,7 @@ ENDPOINT_MINIPAIR GpRenderMono7 =
     L"TopoRenderMono7",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorMono7,
     0, NULL,                                // Interface properties
     L"WaveRenderMono7",
     NULL,                                   // optional template name
@@ -198,6 +226,10 @@ ENDPOINT_MINIPAIR GpRenderMono7 =
 
 // Cable 7: Mono8
 
+// Name GUID pin bridge -> MediaCategories: GP Mono 8
+static const GUID GpPinNameMono8 = { 0xc9a7e160, 0x25fc, 0x5ec3, { 0xbc, 0x94, 0x01, 0x45, 0xad, 0x57, 0x83, 0x8b } };  // {C9A7E160-25FC-5EC3-BC94-0145AD57838B}
+GP_DEFINE_RENDER_TOPO(Mono8, GpPinNameMono8)
+
 static
 ENDPOINT_MINIPAIR GpRenderMono8 =
 {
@@ -205,7 +237,7 @@ ENDPOINT_MINIPAIR GpRenderMono8 =
     L"TopoRenderMono8",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorMono8,
     0, NULL,                                // Interface properties
     L"WaveRenderMono8",
     NULL,                                   // optional template name
@@ -224,6 +256,10 @@ ENDPOINT_MINIPAIR GpRenderMono8 =
 
 // Cable 8: Stereo1
 
+// Name GUID pin bridge -> MediaCategories: GP Stereo 1
+static const GUID GpPinNameStereo1 = { 0x0c0918cb, 0x3048, 0x549a, { 0x89, 0x4e, 0xee, 0x67, 0x0c, 0x39, 0x05, 0xcd } };  // {0C0918CB-3048-549A-894E-EE670C3905CD}
+GP_DEFINE_RENDER_TOPO(Stereo1, GpPinNameStereo1)
+
 static
 ENDPOINT_MINIPAIR GpRenderStereo1 =
 {
@@ -231,7 +267,7 @@ ENDPOINT_MINIPAIR GpRenderStereo1 =
     L"TopoRenderStereo1",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorStereo1,
     0, NULL,                                // Interface properties
     L"WaveRenderStereo1",
     NULL,                                   // optional template name
@@ -250,6 +286,10 @@ ENDPOINT_MINIPAIR GpRenderStereo1 =
 
 // Cable 9: Stereo2
 
+// Name GUID pin bridge -> MediaCategories: GP Stereo 2
+static const GUID GpPinNameStereo2 = { 0x10e9d193, 0x09f9, 0x52bf, { 0x83, 0xb7, 0x61, 0x22, 0xa6, 0x4e, 0xe6, 0xa4 } };  // {10E9D193-09F9-52BF-83B7-6122A64EE6A4}
+GP_DEFINE_RENDER_TOPO(Stereo2, GpPinNameStereo2)
+
 static
 ENDPOINT_MINIPAIR GpRenderStereo2 =
 {
@@ -257,7 +297,7 @@ ENDPOINT_MINIPAIR GpRenderStereo2 =
     L"TopoRenderStereo2",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorStereo2,
     0, NULL,                                // Interface properties
     L"WaveRenderStereo2",
     NULL,                                   // optional template name
@@ -276,6 +316,10 @@ ENDPOINT_MINIPAIR GpRenderStereo2 =
 
 // Cable 10: Stereo3
 
+// Name GUID pin bridge -> MediaCategories: GP Stereo 3
+static const GUID GpPinNameStereo3 = { 0x44c18ac6, 0x31e1, 0x59a2, { 0xbc, 0x3d, 0x61, 0x38, 0x8b, 0xf3, 0xc6, 0xfb } };  // {44C18AC6-31E1-59A2-BC3D-61388BF3C6FB}
+GP_DEFINE_RENDER_TOPO(Stereo3, GpPinNameStereo3)
+
 static
 ENDPOINT_MINIPAIR GpRenderStereo3 =
 {
@@ -283,7 +327,7 @@ ENDPOINT_MINIPAIR GpRenderStereo3 =
     L"TopoRenderStereo3",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorStereo3,
     0, NULL,                                // Interface properties
     L"WaveRenderStereo3",
     NULL,                                   // optional template name
@@ -302,6 +346,10 @@ ENDPOINT_MINIPAIR GpRenderStereo3 =
 
 // Cable 11: Stereo4
 
+// Name GUID pin bridge -> MediaCategories: GP Stereo 4
+static const GUID GpPinNameStereo4 = { 0xa7f48589, 0xe1dc, 0x51a9, { 0xbe, 0xc3, 0xba, 0x0d, 0x87, 0xaa, 0x2b, 0x0a } };  // {A7F48589-E1DC-51A9-BEC3-BA0D87AA2B0A}
+GP_DEFINE_RENDER_TOPO(Stereo4, GpPinNameStereo4)
+
 static
 ENDPOINT_MINIPAIR GpRenderStereo4 =
 {
@@ -309,7 +357,7 @@ ENDPOINT_MINIPAIR GpRenderStereo4 =
     L"TopoRenderStereo4",
     NULL,                                   // optional template name
     CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
+    &GpTopoDescriptorStereo4,
     0, NULL,                                // Interface properties
     L"WaveRenderStereo4",
     NULL,                                   // optional template name
@@ -328,6 +376,10 @@ ENDPOINT_MINIPAIR GpRenderStereo4 =
 
 // Single capture endpoint (sum of all cables)
 
+// Name GUID pin bridge -> MediaCategories: GP Virtual Cable
+static const GUID GpPinNameCapture = { 0x82c2c740, 0x153b, 0x54e6, { 0xa8, 0x29, 0x9b, 0xf2, 0x53, 0x6d, 0x5c, 0x11 } };  // {82C2C740-153B-54E6-A829-9BF2536D5C11}
+GP_DEFINE_CAPTURE_TOPO(Capture, GpPinNameCapture)
+
 static
 ENDPOINT_MINIPAIR GpCapture =
 {
@@ -335,7 +387,7 @@ ENDPOINT_MINIPAIR GpCapture =
     L"TopoCapture",
     NULL,                                   // optional template name
     CreateMicArrayMiniportTopology,
-    &MicArray1TopoMiniportFilterDescriptor,
+    &GpTopoDescriptorCapture,
     0, NULL,                                // Interface properties
     L"WaveCapture",
     NULL,                                   // optional template name

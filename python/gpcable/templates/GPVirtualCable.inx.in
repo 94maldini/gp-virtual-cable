@@ -63,6 +63,11 @@ HKR,Drivers\mixer\wdmaud.drv,Driver,,wdmaud.drv
 
 HKR,Drivers\wave\wdmaud.drv,Description,,%GPVirtualCable_SA.DeviceDesc%
 HKR,Drivers\mixer\wdmaud.drv,Description,,%GPVirtualCable_SA.DeviceDesc%
+;
+; Endpoint names: each bridge pin has its own Name GUID (cables_generated.h); KS reads the name from
+; MediaCategories in this device's software key (Windows 10 1809+).
+;
+@@MEDIA_CATEGORIES@@
 
 ;======================================================
 ; Per-endpoint interface sections (generated: 12 render + 1 capture)

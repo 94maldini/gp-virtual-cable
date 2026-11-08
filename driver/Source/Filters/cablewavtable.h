@@ -528,11 +528,13 @@ static
 PKSDATARANGE CableCaptureDataRangePointers[] =
 {
     // All supported device formats should be listed in the DataRange.
-    PKSDATARANGE(&CableCaptureDataRanges[0]),
-    PKSDATARANGE(&PinDataRangeAttributeList),
+    // Urutan: 24-bit (format default) dulu, lalu 32-bit/24 valid, lalu 16-bit, supaya intersection
+    // dengan range klien wildcard memilih format default.
     PKSDATARANGE(&CableCaptureDataRanges[1]),
     PKSDATARANGE(&PinDataRangeAttributeList),
     PKSDATARANGE(&CableCaptureDataRanges[2]),
+    PKSDATARANGE(&PinDataRangeAttributeList),
+    PKSDATARANGE(&CableCaptureDataRanges[0]),
     PKSDATARANGE(&PinDataRangeAttributeList),
 };
 

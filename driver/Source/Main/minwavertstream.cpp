@@ -83,18 +83,6 @@ Return Value:
         m_pWfExt = NULL;
     }
 
-    if (m_plGpAccumulator)
-    {
-        ExFreePoolWithTag( m_plGpAccumulator, MINWAVERTSTREAM_POOLTAG );
-        m_plGpAccumulator = NULL;
-    }
-
-    if (m_pGpScratch)
-    {
-        ExFreePoolWithTag( m_pGpScratch, MINWAVERTSTREAM_POOLTAG );
-        m_pGpScratch = NULL;
-    }
-
     if (m_pNotificationTimer)
     {
         ExDeleteTimer
@@ -110,6 +98,22 @@ Return Value:
     // DPCs to complete before we free the notification DPC.
     //
     KeFlushQueuedDpcs();
+
+    //
+    // GP Virtual Cable: akumulator/scratch dipakai callback timer (WriteBytes); bebaskan hanya
+    // setelah timer dihapus dan semua DPC selesai.
+    //
+    if (m_plGpAccumulator)
+    {
+        ExFreePoolWithTag( m_plGpAccumulator, MINWAVERTSTREAM_POOLTAG );
+        m_plGpAccumulator = NULL;
+    }
+
+    if (m_pGpScratch)
+    {
+        ExFreePoolWithTag( m_pGpScratch, MINWAVERTSTREAM_POOLTAG );
+        m_pGpScratch = NULL;
+    }
 
     DPF_ENTER(("[CMiniportWaveRTStream::~CMiniportWaveRTStream]"));
 } // ~CMiniportWaveRTStream
