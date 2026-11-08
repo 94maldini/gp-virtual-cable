@@ -22,3 +22,5 @@ driver/x64/
 
 # hasil build lokal
 out/
+.vs/
+*.user
