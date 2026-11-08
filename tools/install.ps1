@@ -1,10 +1,11 @@
 param(
-    [string]$PackageDir = "$PSScriptRoot\..\driver\x64\Debug\package",
+    [string]$PackageDir,
     [string]$CertPath,
     [string]$DevconPath
 )
 . "$PSScriptRoot\common.ps1"
 Assert-Admin
+if (-not $PackageDir) { $PackageDir = Get-DefaultPackageDir }
 
 if (-not (Test-Path -LiteralPath $PackageDir)) {
     Write-Host "ERROR: folder paket tidak ditemukan: $PackageDir" -ForegroundColor Red

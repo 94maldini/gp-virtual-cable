@@ -73,3 +73,12 @@ function Assert-ExitOk {
     }
     return $false
 }
+
+# Folder paket bawaan: layout VM-kit (..\driver), lalu repo setelah build (..\out\driver), lalu build Visual Studio lama.
+function Get-DefaultPackageDir {
+    $kit = Join-Path $PSScriptRoot '..\driver'
+    if (Test-Path -LiteralPath (Join-Path $kit 'GPVirtualCable.inf')) { return $kit }
+    $out = Join-Path $PSScriptRoot '..\out\driver'
+    if (Test-Path -LiteralPath (Join-Path $out 'GPVirtualCable.inf')) { return $out }
+    return (Join-Path $PSScriptRoot '..\driver\x64\Debug\package')
+}

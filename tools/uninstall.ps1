@@ -1,9 +1,10 @@
 param(
-    [string]$PackageDir = "$PSScriptRoot\..\driver\x64\Debug\package",
+    [string]$PackageDir,
     [string]$DevconPath
 )
 . "$PSScriptRoot\common.ps1"
 Assert-Admin
+if (-not $PackageDir) { $PackageDir = Get-DefaultPackageDir }
 
 $reboot = $false
 $devcon = Find-Devcon -DevconPath $DevconPath -SearchDirs @($PackageDir, $PSScriptRoot)
