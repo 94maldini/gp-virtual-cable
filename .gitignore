@@ -19,3 +19,6 @@ driver/x64/
 # scratch & artefak CI
 .superpowers/scratch/
 .superpowers/sdd/*/artifacts/
+
+# hasil build lokal
+out/
