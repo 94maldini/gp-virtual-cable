@@ -1,5 +1,7 @@
 # GP Virtual Cable Implementation Plan
 
+> **DIGANTIKAN** oleh `docs/superpowers/plans/2026-11-08-gp-virtual-cable-r2.md` (spec revisi 2, 2026-11-08). Jangan dieksekusi lagi.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Driver virtual audio pribadi untuk Windows 10 yang memunculkan 12 cable loopback (8 mono + 4 stereo) yang bisa dibuka GP Mix-Lite lewat WASAPI, ditambah aplikasi meter Python.

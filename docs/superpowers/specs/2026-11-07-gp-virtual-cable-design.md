@@ -1,6 +1,6 @@
 # GP Virtual Cable — Desain
 
-Tanggal: 2026-11-07 · Revisi 2: 2026-11-08 · Status: revisi 2 menunggu persetujuan
+Tanggal: 2026-11-07 · Revisi 2: 2026-11-08 · Status: revisi 2 disetujui (2026-11-08)
 
 ## Maksud dan alasan
 
@@ -58,8 +58,8 @@ jadi di PC ini virtual cable adalah satu-satunya cara memisahkan sumber.
 
 - Driver kernel-mode wajib C++ dengan WDK (PortCls, WaveRT). Python tidak bisa dipakai untuk driver.
 - Instalasi lewat **test-signing mode** (`bcdedit /set testsigning on`); **Secure Boot harus dimatikan**.
-- Toolchain belum terpasang di PC: Visual Studio 2022 (komponen C++ minimal) + Windows SDK + WDK. Ruang C: terbatas
-  (lihat `docs/setup-notes.md`).
+- Tidak ada Visual Studio di PC (ruang C: terbatas). Driver di-build di **GitHub Actions** (repo private) memakai
+  WDK/SDK dari NuGet; pengguna mengunduh artefak hasil build.
 - Uji pertama di VM Windows 11 (VMware Workstation), lalu PC utama Windows 10 19045.
 - Kode ditulis Claude; pengguna yang build, install, dan tes.
 - GP Mix memakai satu device Input. Karena itu **mic/instrumen juga harus lewat cable** kalau GP Mix memakai
