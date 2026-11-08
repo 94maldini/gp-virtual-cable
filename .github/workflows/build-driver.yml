@@ -2,6 +2,7 @@ name: build-driver
 
 on:
   push:
+    branches: ['**']
   workflow_dispatch:
 
 jobs:
@@ -20,8 +21,11 @@ jobs:
           Write-Host "msbuild: $ms"
           "MSBUILD=$ms" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Build Debug x64 (_NT_TARGET_VERSION=0x0A000008 = Win10 2004/19041)
-        run: '& $env:MSBUILD driver\SimpleAudioSample.sln /p:Configuration=Debug /p:Platform=x64 /p:_NT_TARGET_VERSION=0x0A000008 /v:detailed /fl "/flp:logfile=msbuild.log;verbosity=detailed"'
+      - name: Build Debug x64 dengan NT_TARGET_VERSION 0x0A000008
+        shell: pwsh
+        run: |
+          & $env:MSBUILD driver\SimpleAudioSample.sln /p:Configuration=Debug /p:Platform=x64 /p:_NT_TARGET_VERSION=0x0A000008 /v:minimal /fl "/flp:logfile=msbuild.log;verbosity=detailed"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Bukti _NT_TARGET_VERSION di command line cl
         shell: pwsh
