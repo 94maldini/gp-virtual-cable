@@ -30,7 +30,7 @@ typedef unsigned long ULONG;
 #define GP_S24_MAX  8388607L
 #define GP_S24_MIN  (-8388608L)
 
-__inline LONG GpRead24(const BYTE* p)
+static __inline LONG GpRead24(const BYTE* p)
 {
     LONG v = (LONG)p[0] | ((LONG)p[1] << 8) | ((LONG)p[2] << 16);
     if (v & 0x800000L) v -= 0x1000000L;
@@ -38,7 +38,7 @@ __inline LONG GpRead24(const BYTE* p)
 }
 
 // acc[f*accChannels + firstChannel + c] += sampel. FALSE (tanpa menulis) bila di luar jangkauan.
-__inline BOOLEAN GpMixAccumulate(LONG* acc, ULONG frames, ULONG accChannels,
+static __inline BOOLEAN GpMixAccumulate(LONG* acc, ULONG frames, ULONG accChannels,
                                  const BYTE* src24, ULONG srcChannels, ULONG firstChannel)
 {
     if (srcChannels == 0 || firstChannel > accChannels || srcChannels > accChannels - firstChannel) return 0;
@@ -51,7 +51,7 @@ __inline BOOLEAN GpMixAccumulate(LONG* acc, ULONG frames, ULONG accChannels,
 }
 
 // Saturasi ke 24-bit lalu tulis: 16 -> v>>8; 24 -> packed; 32 -> v<<8; bits lain -> nol.
-__inline void GpMixWrite(const LONG* acc, ULONG frames, ULONG channels, BYTE* dst, ULONG bitsPerSample)
+static __inline void GpMixWrite(const LONG* acc, ULONG frames, ULONG channels, BYTE* dst, ULONG bitsPerSample)
 {
     ULONG count = frames * channels;
     if (bitsPerSample != 16 && bitsPerSample != 24 && bitsPerSample != 32) {

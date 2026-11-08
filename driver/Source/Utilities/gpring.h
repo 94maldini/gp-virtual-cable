@@ -34,26 +34,26 @@ struct GpRing {
     ULONG Fill;
 };
 
-__inline void GpRingReset(GpRing* r)
+static __inline void GpRingReset(GpRing* r)
 {
     r->ReadPos = 0;
     r->Fill = 0;
 }
 
-__inline void GpRingInit(GpRing* r, BYTE* storage, ULONG capacity)
+static __inline void GpRingInit(GpRing* r, BYTE* storage, ULONG capacity)
 {
     r->Data = storage;
     r->Capacity = capacity;
     GpRingReset(r);
 }
 
-__inline ULONG GpRingFill(const GpRing* r)
+static __inline ULONG GpRingFill(const GpRing* r)
 {
     return r->Fill;
 }
 
 // Penuh -> buang byte tertua. n > Capacity -> simpan Capacity byte terakhir.
-__inline void GpRingWrite(GpRing* r, const BYTE* src, ULONG n)
+static __inline void GpRingWrite(GpRing* r, const BYTE* src, ULONG n)
 {
     if (r->Capacity == 0 || n == 0) return;
     if (n >= r->Capacity) {
@@ -75,7 +75,7 @@ __inline void GpRingWrite(GpRing* r, const BYTE* src, ULONG n)
 }
 
 // Salin min(n, Fill) byte, sisa dst diisi 0. Return jumlah byte yang tersalin.
-__inline ULONG GpRingRead(GpRing* r, BYTE* dst, ULONG n)
+static __inline ULONG GpRingRead(GpRing* r, BYTE* dst, ULONG n)
 {
     ULONG take = (n < r->Fill) ? n : r->Fill;
     if (take > 0) {
@@ -91,7 +91,7 @@ __inline ULONG GpRingRead(GpRing* r, BYTE* dst, ULONG n)
 }
 
 // Fill > maxFill -> buang byte tertua sampai Fill == maxFill.
-__inline void GpRingDiscardTo(GpRing* r, ULONG maxFill)
+static __inline void GpRingDiscardTo(GpRing* r, ULONG maxFill)
 {
     if (r->Fill > maxFill) {
         ULONG drop = r->Fill - maxFill;

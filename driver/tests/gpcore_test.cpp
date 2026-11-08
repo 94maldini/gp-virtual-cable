@@ -59,6 +59,15 @@ static void RingTests()
         CHECK(GpRingRead(&r, out, 4) == 4);
         CHECK(Eq(out, exp, 4));
     }
+    TEST(write_exact_capacity_on_partial_ring) {
+        GpRing r; GpRingInit(&r, store, 4);
+        const BYTE a[2] = {1, 2}, b[4] = {3, 4, 5, 6};
+        GpRingWrite(&r, a, 2);
+        GpRingWrite(&r, b, 4);
+        CHECK(GpRingFill(&r) == 4);
+        CHECK(GpRingRead(&r, out, 4) == 4);
+        CHECK(Eq(out, b, 4));
+    }
     TEST(reset_clears) {
         GpRing r; GpRingInit(&r, store, 4);
         const BYTE a[3] = {1, 2, 3};
@@ -162,6 +171,38 @@ static void MixTests()
         BYTE dst[4] = {0};
         GpMixWrite(acc, 1, 1, dst, 32);
         CHECK(dst[0] == 0x00 && dst[1] == 0x56 && dst[2] == 0x34 && dst[3] == 0x12);
+    }
+    TEST(write_negative_all_widths) {
+        LONG acc[1] = {-2};
+        BYTE d16[2] = {0}, d24[3] = {0}, d32[4] = {0};
+        GpMixWrite(acc, 1, 1, d16, 16);
+        GpMixWrite(acc, 1, 1, d24, 24);
+        GpMixWrite(acc, 1, 1, d32, 32);
+        CHECK(d16[0] == 0xFF && d16[1] == 0xFF); // -2 >> 8 == -1 (aritmetika)
+        CHECK(d24[0] == 0xFE && d24[1] == 0xFF && d24[2] == 0xFF);
+        CHECK(d32[0] == 0x00 && d32[1] == 0xFE && d32[2] == 0xFF && d32[3] == 0xFF);
+    }
+    TEST(mix_saturates_positive_16_32) {
+        LONG acc[1] = {0};
+        const BYTE mx[3] = {0xFF, 0xFF, 0x7F};
+        BYTE d16[2] = {0}, d32[4] = {0};
+        GpMixAccumulate(acc, 1, 1, mx, 1, 0);
+        GpMixAccumulate(acc, 1, 1, mx, 1, 0);
+        GpMixWrite(acc, 1, 1, d16, 16);
+        GpMixWrite(acc, 1, 1, d32, 32);
+        CHECK(d16[0] == 0xFF && d16[1] == 0x7F);
+        CHECK(d32[0] == 0x00 && d32[1] == 0xFF && d32[2] == 0xFF && d32[3] == 0x7F);
+    }
+    TEST(mix_saturates_negative_16_32) {
+        LONG acc[1] = {0};
+        const BYTE mn[3] = {0x00, 0x00, 0x80};
+        BYTE d16[2] = {0}, d32[4] = {0};
+        GpMixAccumulate(acc, 1, 1, mn, 1, 0);
+        GpMixAccumulate(acc, 1, 1, mn, 1, 0);
+        GpMixWrite(acc, 1, 1, d16, 16);
+        GpMixWrite(acc, 1, 1, d32, 32);
+        CHECK(d16[0] == 0x00 && d16[1] == 0x80);
+        CHECK(d32[0] == 0x00 && d32[1] == 0x00 && d32[2] == 0x00 && d32[3] == 0x80);
     }
     TEST(write_other_bits_zero_fills) {
         LONG acc[1] = {0x123456};
