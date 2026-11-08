@@ -48,3 +48,19 @@ def test_peak_hold_holds_then_decays():
 def test_classify():
     assert classify(-30.0) == "signal"
     assert classify(-70.0) == "silent"
+
+
+def test_linear_to_dbfs_values():
+    from gpcable.levels import linear_to_dbfs
+    assert linear_to_dbfs(1.0) == 0.0
+    assert linear_to_dbfs(0.5) == pytest.approx(-6.02, abs=0.01)
+    assert linear_to_dbfs(0.0) == FLOOR_DB
+    assert linear_to_dbfs(-0.3) == FLOOR_DB
+    assert linear_to_dbfs(1e-9) == FLOOR_DB
+    assert type(linear_to_dbfs(0.5)) is float
+
+
+def test_peak_hold_never_below_floor():
+    h = PeakHold()
+    h.update(-10.0, 0.0)
+    assert h.update(FLOOR_DB, 1000.0) == FLOOR_DB

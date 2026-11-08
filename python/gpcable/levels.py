@@ -1,9 +1,17 @@
 """Level meter logic - pure math for audio level computation."""
 
+import math
 from typing import Literal
 import numpy as np
 
 FLOOR_DB = -120.0
+
+
+def linear_to_dbfs(x: float) -> float:
+    """Linear amplitude (0..1) to dBFS; <= 0 or tiny values give FLOOR_DB."""
+    if x <= 0:
+        return FLOOR_DB
+    return float(max(20.0 * math.log10(x), FLOOR_DB))
 
 
 def peak_dbfs(block: np.ndarray) -> float:
@@ -23,7 +31,7 @@ def peak_dbfs(block: np.ndarray) -> float:
     if peak == 0:
         return FLOOR_DB
 
-    return max(20 * np.log10(peak), FLOOR_DB)
+    return float(max(20 * np.log10(peak), FLOOR_DB))
 
 
 def rms_dbfs(block: np.ndarray) -> float:
@@ -43,7 +51,7 @@ def rms_dbfs(block: np.ndarray) -> float:
     if rms == 0:
         return FLOOR_DB
 
-    return max(20 * np.log10(rms), FLOOR_DB)
+    return float(max(20 * np.log10(rms), FLOOR_DB))
 
 
 class PeakHold:
@@ -85,7 +93,7 @@ class PeakHold:
         if time_since_held > self.hold_s:
             # Hold period expired, apply decay
             decay_amount = (time_since_held - self.hold_s) * self.decay_db_per_s
-            current_value = self._held_value - decay_amount
+            current_value = max(self._held_value - decay_amount, FLOOR_DB)
         else:
             # Still in hold period
             current_value = self._held_value

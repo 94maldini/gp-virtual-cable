@@ -1,6 +1,5 @@
-from gpcable.config import Cable, CableConfig
-from gpcable.devices import CableDevices
-from gpcable.meter import bar_fraction, plan_streams
+from gpcable.config import Cable, CableConfig, default_config_path, load_config
+from gpcable.meter import bar_fraction, channel_label, row_status
 
 
 def test_bar_fraction_clamped_and_linear():
@@ -11,22 +10,19 @@ def test_bar_fraction_clamped_and_linear():
     assert bar_fraction(-30.0) == 0.5
 
 
-def test_plan_streams_maps_found_and_missing():
-    cfg = CableConfig(48000, 24, 8, "GP Virtual Cable", (
-        Cable(0, "Mono1", "GP Mono 1", 1, 1),
-        Cable(1, "Stereo1", "GP Stereo 1", 2, 1),
-        Cable(2, "Stereo2", "GP Stereo 2", 2, 3),
-    ))
-    found = {
-        "Mono1": CableDevices(input_index=7, output_index=8),
-        "Stereo1": CableDevices(input_index=None, output_index=3),
-    }
-    plan = plan_streams(cfg, found)
-    assert [(c.id, i) for c, i in plan] == [("Mono1", 7), ("Stereo1", None), ("Stereo2", None)]
-
-
 def test_row_status_uses_instantaneous_peak():
-    from gpcable.meter import row_status
     assert row_status(False, 0.0) == "tidak ditemukan"
     assert row_status(True, -20.0) == "signal"
     assert row_status(True, -90.0) == "silent"
+
+
+def test_channel_label_mono_and_stereo():
+    assert channel_label(Cable(0, "Mono3", "GP Mono 3", 1, 3)) == "ch 3"
+    assert channel_label(Cable(1, "Stereo2", "GP Stereo 2", 2, 3)) == "ch 3+4"
+
+
+def test_meter_rows_show_channel_labels():
+    cfg = load_config(default_config_path())
+    assert [channel_label(c) for c in cfg.cables] == [
+        "ch 1", "ch 2", "ch 3", "ch 4", "ch 5", "ch 6", "ch 7", "ch 8",
+        "ch 1+2", "ch 3+4", "ch 5+6", "ch 7+8"]

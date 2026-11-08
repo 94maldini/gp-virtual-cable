@@ -11,13 +11,6 @@ WASAPI = "Windows WASAPI"
 
 
 @dataclass(frozen=True)
-class CableDevices:
-    # Legacy per-cable pair; still imported by meter.py until it is migrated.
-    input_index: int | None
-    output_index: int | None
-
-
-@dataclass(frozen=True)
 class CableDeviceMap:
     outputs: dict[str, int | None]  # keyed by Cable.id, all ids present
     capture: int | None
