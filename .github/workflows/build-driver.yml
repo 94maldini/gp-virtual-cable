@@ -12,7 +12,7 @@ jobs:
       - name: Tes ring buffer + mixer (user-mode)
         shell: pwsh
         run: |
-          .	ools	est-gpcore.ps1
+          .\tools\test-gpcore.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   build:
