@@ -2,3 +2,20 @@ python/.venv/
 __pycache__/
 .pytest_cache/
 *.egg-info/
+
+# driver (build lokal/CI)
+driver/packages/
+driver/x64/
+**/x64/Debug/
+**/x64/Release/
+*.obj
+*.pdb
+*.lib
+*.exp
+*.tlog
+*.idb
+*.ilk
+
+# scratch & artefak CI
+.superpowers/scratch/
+.superpowers/sdd/*/artifacts/

@@ -1,0 +1,36 @@
+name: build-driver
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: NuGet restore
+        run: nuget restore driver\packages.config -PackagesDirectory driver\packages
+
+      - name: Cari msbuild
+        shell: pwsh
+        run: |
+          $ms = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -prerelease -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" | Select-Object -First 1
+          Write-Host "msbuild: $ms"
+          "MSBUILD=$ms" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build Debug x64 (_NT_TARGET_VERSION=0x0A000008 = Win10 2004/19041)
+        run: '& $env:MSBUILD driver\SimpleAudioSample.sln /p:Configuration=Debug /p:Platform=x64 /p:_NT_TARGET_VERSION=0x0A000008 /v:detailed /fl "/flp:logfile=msbuild.log;verbosity=detailed"'
+
+      - name: Bukti _NT_TARGET_VERSION di command line cl
+        shell: pwsh
+        run: |
+          Select-String -Path msbuild.log -Pattern '_NT_TARGET_VERSION' | Select-Object -First 6 | ForEach-Object { $_.Line.Trim().Substring(0, [Math]::Min(400, $_.Line.Trim().Length)) }
+
+      - name: Diagnostik hasil build
+        if: always()
+        shell: pwsh
+        run: |
+          Get-ChildItem driver -Recurse -Include *.sys,*.inf,*.cat,*.cer,*.pfx | ForEach-Object { "{0}  {1}" -f $_.FullName, $_.Length }
+          Get-ChildItem driver\packages -Recurse -Filter devcon.exe | ForEach-Object { "devcon: " + $_.FullName }
