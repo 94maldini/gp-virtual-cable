@@ -12,10 +12,10 @@ def test_bar_fraction_clamped_and_linear():
 
 
 def test_plan_streams_maps_found_and_missing():
-    cfg = CableConfig(48000, 24, (
-        Cable(0, "Mono1", "GP Mono 1", 1),
-        Cable(1, "Stereo1", "GP Stereo 1", 2),
-        Cable(2, "Stereo2", "GP Stereo 2", 2),
+    cfg = CableConfig(48000, 24, 8, "GP Virtual Cable", (
+        Cable(0, "Mono1", "GP Mono 1", 1, 1),
+        Cable(1, "Stereo1", "GP Stereo 1", 2, 1),
+        Cable(2, "Stereo2", "GP Stereo 2", 2, 3),
     ))
     found = {
         "Mono1": CableDevices(input_index=7, output_index=8),

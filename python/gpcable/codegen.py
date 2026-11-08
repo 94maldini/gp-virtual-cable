@@ -18,12 +18,14 @@ def inf_escape(s: str) -> str:
     return s.replace("%", "%%").replace('"', '""')
 
 
+CAPTURE_WAVE = "WaveCapture"
+CAPTURE_TOPO = "TopoCapture"
+
+
 def ks_names(cid: str) -> dict[str, str]:
     return {
         "WaveRender": f"WaveRender{cid}",
         "TopoRender": f"TopoRender{cid}",
-        "WaveCapture": f"WaveCapture{cid}",
-        "TopoCapture": f"TopoCapture{cid}",
     }
 
 
@@ -57,7 +59,12 @@ ENDPOINT_MINIPAIR {var} =
 
 def render_header(cfg: CableConfig) -> str:
     parts = [BANNER, "#ifndef _GP_CABLES_GENERATED_H_\n#define _GP_CABLES_GENERATED_H_\n",
-             f"#define GP_CABLE_COUNT {len(cfg.cables)}\n"]
+             f"#define GP_CABLE_COUNT {len(cfg.cables)}\n"
+             f"#define GP_CAPTURE_CHANNELS {cfg.capture_channels}\n"
+             "#define GP_CAPTURE_CABLE_INDEX ((ULONG)-1)\n",
+             "typedef struct _GP_CABLE_ROUTE\n{\n    ULONG Channels;\n"
+             "    ULONG FirstChannel;   // 0-based position in the capture endpoint\n"
+             "} GP_CABLE_ROUTE;\n"]
     for c in cfg.cables:
         sfx = _SUFFIX[c.channels]
         k = ks_names(c.id)
@@ -68,53 +75,70 @@ def render_header(cfg: CableConfig) -> str:
             "SpeakerTopoMiniportFilterDescriptor", k["WaveRender"],
             f"CableRenderWaveDescriptor{sfx}", c.channels,
             f"CableRenderFormats{sfx}", "SpeakerTopologyPhysicalConnections", c.index))
-        parts.append(_minipair(
-            f"GpCapture{c.id}", "eCableCaptureDevice", k["TopoCapture"],
-            "CreateMicArrayMiniportTopology",
-            "MicArray1TopoMiniportFilterDescriptor", k["WaveCapture"],
-            f"CableCaptureWaveDescriptor{sfx}", c.channels,
-            f"CableCaptureFormats{sfx}", "MicArray1TopologyPhysicalConnections", c.index))
-    for arr, pre in (("g_RenderEndpoints", "GpRender"), ("g_CaptureEndpoints", "GpCapture")):
-        items = ",\n".join(f"    &{pre}{c.id}" for c in cfg.cables)
-        parts.append(f"static\nPENDPOINT_MINIPAIR {arr}[] =\n{{\n{items}\n}};\n")
-    chans = ", ".join(str(c.channels) for c in cfg.cables)
-    parts.append(f"static const ULONG g_GpCableChannels[GP_CABLE_COUNT] = {{ {chans} }};\n")
+    parts.append("// Single capture endpoint (sum of all cables)\n")
+    parts.append(_minipair(
+        "GpCapture", "eCableCaptureDevice", CAPTURE_TOPO,
+        "CreateMicArrayMiniportTopology",
+        "MicArray1TopoMiniportFilterDescriptor", CAPTURE_WAVE,
+        "CableCaptureWaveDescriptor", "GP_CAPTURE_CHANNELS",
+        "CableCaptureFormats", "MicArray1TopologyPhysicalConnections",
+        "GP_CAPTURE_CABLE_INDEX"))
+    items = ",\n".join(f"    &GpRender{c.id}" for c in cfg.cables)
+    parts.append(f"static\nPENDPOINT_MINIPAIR g_RenderEndpoints[] =\n{{\n{items}\n}};\n")
+    parts.append("static\nPENDPOINT_MINIPAIR g_CaptureEndpoints[] =\n{\n    &GpCapture\n};\n")
+    routes = ",\n".join(f"    {{ {c.channels}, {c.first_channel - 1} }},  // {c.id}" for c in cfg.cables)
+    parts.append(f"static const GP_CABLE_ROUTE g_GpCableRoutes[GP_CABLE_COUNT] =\n{{\n{routes}\n}};\n")
     parts.append("#endif // _GP_CABLES_GENERATED_H_\n")
     return "\n".join(parts)
 
 
+_PLACEHOLDERS = ("@@INTERFACE_SECTIONS@@", "@@ADD_INTERFACES@@", "@@STRINGS@@")
+
+
+def _endpoint_inx(key: str, cat: str, wave: str, topo: str, pname: str) -> tuple[str, str]:
+    w = f"GP.I.Wave{key}"
+    t = f"GP.I.Topo{key}"
+    section = (
+        f"[{w}]\nAddReg={w}.AddReg\n\n"
+        f"[{w}.AddReg]\nHKR,,CLSID,,%Proxy.CLSID%\nHKR,,FriendlyName,,{pname}\n\n"
+        f"[{t}]\nAddReg={t}.AddReg\n\n"
+        f"[{t}.AddReg]\nHKR,,CLSID,,%Proxy.CLSID%\nHKR,,FriendlyName,,{pname}\n"
+        "HKR,EP\\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%\n"
+        "HKR,EP\\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1\n"
+    )
+    add = (
+        f"AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_{wave}%, {w}\n"
+        f"AddInterface=%{cat}%, %KSNAME_{wave}%, {w}\n"
+        f"AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_{wave}%, {w}\n"
+        f"AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_{topo}%, {t}\n"
+        f"AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_{topo}%, {t}\n"
+    )
+    return section, add
+
+
 def render_inx(cfg: CableConfig, template: str) -> str:
+    for ph in _PLACEHOLDERS:
+        if ph not in template:
+            raise ValueError(f"template is missing placeholder {ph}")
     sections: list[str] = []
     adds: list[str] = []
     strings: list[str] = []
     for c in cfg.cables:
         k = ks_names(c.id)
-        pname = f"%GP_{c.id}_Name%"
-        for kind, cat, wave, topo in (
-            ("Render", "KSCATEGORY_RENDER", k["WaveRender"], k["TopoRender"]),
-            ("Capture", "KSCATEGORY_CAPTURE", k["WaveCapture"], k["TopoCapture"]),
-        ):
-            w = f"GP.I.Wave{kind}{c.id}"
-            t = f"GP.I.Topo{kind}{c.id}"
-            sections.append(
-                f"[{w}]\nAddReg={w}.AddReg\n\n"
-                f"[{w}.AddReg]\nHKR,,CLSID,,%Proxy.CLSID%\nHKR,,FriendlyName,,{pname}\n\n"
-                f"[{t}]\nAddReg={t}.AddReg\n\n"
-                f"[{t}.AddReg]\nHKR,,CLSID,,%Proxy.CLSID%\nHKR,,FriendlyName,,{pname}\n"
-                "HKR,EP\\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%\n"
-                "HKR,EP\\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1\n"
-            )
-            adds.append(
-                f"; {c.id} {kind.lower()}\n"
-                f"AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_{wave}%, {w}\n"
-                f"AddInterface=%{cat}%, %KSNAME_{wave}%, {w}\n"
-                f"AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_{wave}%, {w}\n"
-                f"AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_{topo}%, {t}\n"
-                f"AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_{topo}%, {t}\n"
-            )
-            strings.append(f'KSNAME_{wave}="{wave}"')
-            strings.append(f'KSNAME_{topo}="{topo}"')
+        s, a = _endpoint_inx("Render" + c.id, "KSCATEGORY_RENDER",
+                             k["WaveRender"], k["TopoRender"], f"%GP_{c.id}_Name%")
+        sections.append(s)
+        adds.append(f"; {c.id} render\n" + a)
+        strings.append(f'KSNAME_{k["WaveRender"]}="{k["WaveRender"]}"')
+        strings.append(f'KSNAME_{k["TopoRender"]}="{k["TopoRender"]}"')
         strings.append(f'GP_{c.id}_Name="{inf_escape(c.name)}"')
+    s, a = _endpoint_inx("Capture", "KSCATEGORY_CAPTURE",
+                         CAPTURE_WAVE, CAPTURE_TOPO, "%GP_Capture_Name%")
+    sections.append(s)
+    adds.append("; capture\n" + a)
+    strings.append(f'KSNAME_{CAPTURE_WAVE}="{CAPTURE_WAVE}"')
+    strings.append(f'KSNAME_{CAPTURE_TOPO}="{CAPTURE_TOPO}"')
+    strings.append(f'GP_Capture_Name="{inf_escape(cfg.capture_name)}"')
     out = template
     out = out.replace("@@INTERFACE_SECTIONS@@", "\n".join(sections))
     out = out.replace("@@ADD_INTERFACES@@", "\n".join(adds))

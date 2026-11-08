@@ -1,62 +1,76 @@
 sample_rate = 48000
 bits = 24
+capture_channels = 8
+capture_name = "GP Virtual Cable"
 
 [[cable]]
 id = "Mono1"
 name = "GP Mono 1"
 channels = 1
+first_channel = 1
 
 [[cable]]
 id = "Mono2"
 name = "GP Mono 2"
 channels = 1
+first_channel = 2
 
 [[cable]]
 id = "Mono3"
 name = "GP Mono 3"
 channels = 1
+first_channel = 3
 
 [[cable]]
 id = "Mono4"
 name = "GP Mono 4"
 channels = 1
+first_channel = 4
 
 [[cable]]
 id = "Mono5"
 name = "GP Mono 5"
 channels = 1
+first_channel = 5
 
 [[cable]]
 id = "Mono6"
 name = "GP Mono 6"
 channels = 1
+first_channel = 6
 
 [[cable]]
 id = "Mono7"
 name = "GP Mono 7"
 channels = 1
+first_channel = 7
 
 [[cable]]
 id = "Mono8"
 name = "GP Mono 8"
 channels = 1
+first_channel = 8
 
 [[cable]]
 id = "Stereo1"
 name = "GP Stereo 1"
 channels = 2
+first_channel = 1
 
 [[cable]]
 id = "Stereo2"
 name = "GP Stereo 2"
 channels = 2
+first_channel = 3
 
 [[cable]]
 id = "Stereo3"
 name = "GP Stereo 3"
 channels = 2
+first_channel = 5
 
 [[cable]]
 id = "Stereo4"
 name = "GP Stereo 4"
 channels = 2
+first_channel = 7
