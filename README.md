@@ -49,33 +49,40 @@ Menghasilkan `out\vm-kit\GPVirtualCable-kit.zip` (driver, skrip, sumber Python, 
 
 ## Uji di VM (Windows 11, VMware)
 
-Semua perintah di PowerShell **Run as administrator**, dari folder `GPVirtualCable-kit`.
+Semua perintah di PowerShell **Run as administrator**.
 
-1. Matikan VM, lalu VM Settings -> Options -> Advanced -> hapus centang **Enable secure boot**. Bila BitLocker aktif: `Suspend-BitLocker -MountPoint C: -RebootCount 1`.
+> **Penting:** setiap jendela PowerShell Administrator **baru** (termasuk setelah reboot) harus diawali `Set-ExecutionPolicy -Scope Process Bypass`, kalau tidak skrip `.ps1` ditolak (kebijakan bawaan Windows 11 = Restricted). Pindah juga ke folder paket: `cd C:\...\GPVirtualCable-kit` (ganti dengan lokasi ekstrak).
+
+Sebelum mulai, ambil **snapshot VMware**; bila VM gagal boot, kembalikan ke snapshot itu.
+
+1. Matikan VM, lalu VM Settings -> Options -> Advanced -> hapus centang **Enable secure boot**. Bila BitLocker aktif, **suspend dulu sebelum test-signing + reboot**: `Suspend-BitLocker -MountPoint C: -RebootCount 1`.
 2. Aktifkan test-signing, lalu **reboot**:
    ```powershell
+   cd C:\...\GPVirtualCable-kit
    Set-ExecutionPolicy -Scope Process Bypass
    .\tools\enable-testsigning.ps1
    ```
-3. Pasang driver:
+3. Pasang driver (jendela Admin **baru** setelah reboot, jadi ulangi `cd` dan `Set-ExecutionPolicy`):
    ```powershell
+   cd C:\...\GPVirtualCable-kit
+   Set-ExecutionPolicy -Scope Process Bypass
    .\tools\install.ps1
    ```
    Tanpa `-PackageDir`, skrip memakai folder `driver\` di samping `tools\`. Opsi: `-PackageDir`, `-CertPath`, `-DevconPath`.
 4. Buka `mmsys.cpl`. Harus ada **12 Playback**: "GP Mono 1".."GP Mono 8", "GP Stereo 1".."GP Stereo 4", dan **1 Recording "GP Virtual Cable"** (8 channel). Bila namanya tampil sebagai "Speakers" / "Microphone Array", **laporkan** (lihat Troubleshooting).
-5. Pasang Python 3.11+ (python.org, centang "Add to PATH"), lalu:
+5. Pasang Python 3.11+ (python.org, centang "Add to PATH"), lalu di jendela PowerShell baru:
    ```powershell
+   cd C:\...\GPVirtualCable-kit
    pip install -e ".\python[dev]"
    python -m gpcable.loopback
    ```
    Keluaran per cable: `PASS GP Mono 1: 300 Hz -> ch 1..1` (atau `FAIL ...`), diakhiri `12/12 passed`.
-6. Tes end-to-end:
+6. Tes end-to-end (dari folder `python` di dalam paket):
    ```powershell
-   cd python
+   cd C:\...\GPVirtualCable-kit\python
    python -m pytest -m e2e
-   cd ..
    ```
-7. Meter level: `python -m gpcable.meter` (atau `gp-meter`).
+7. Meter level (dari folder mana saja setelah `pip install -e`): `python -m gpcable.meter` (atau `gp-meter`).
 8. **Opsional - Driver Verifier:**
    ```powershell
    verifier /standard /driver GPVirtualCable.sys
@@ -86,7 +93,7 @@ Semua perintah di PowerShell **Run as administrator**, dari folder `GPVirtualCab
 
 1. Buat **System Restore point** (rollback: `rstrui`).
 2. Matikan **Secure Boot** di BIOS/UEFI; suspend BitLocker bila dipakai.
-3. `tools\enable-testsigning.ps1` -> reboot -> `tools\install.ps1` (dari repo yang sudah di-build, skrip memakai `out\driver\`).
+3. Suspend BitLocker bila dipakai. Di PowerShell Administrator, `cd <folder repo>`, jalankan `Set-ExecutionPolicy -Scope Process Bypass`, lalu `tools\enable-testsigning.ps1` -> reboot. Buka PowerShell Administrator **baru**, `cd <folder repo>`, ulangi `Set-ExecutionPolicy -Scope Process Bypass`, lalu `tools\install.ps1` (skrip memakai `out\driver\`).
 4. Periksa `mmsys.cpl` seperti di atas.
 
 ### Setup GP Mix-Lite
@@ -95,7 +102,7 @@ Semua perintah di PowerShell **Run as administrator**, dari folder `GPVirtualCab
 - **Input**: "GP Virtual Cable".
 - **Sample rate: 48000 Hz** (wajib; driver hanya mendukung 48 kHz).
 - Aktifkan input channel **1+2, 3+4, 5+6, 7+8** (dan channel mono sesuai kebutuhan).
-- Routing per aplikasi (Settings -> System -> Sound -> App volume and device preferences, atau output device di aplikasinya):
+- Routing per aplikasi (Windows 10: Settings -> System -> Sound -> App volume and device preferences; Windows 11: Settings -> System -> Sound -> Volume mixer; atau output device di aplikasinya):
   - Discord -> output **GP Stereo 2** -> muncul di GP Mix input **3+4**
   - Spotify -> output **GP Stereo 3** -> muncul di input **5+6**
 - **Mic**: Control Panel -> Sound -> tab Recording -> mic -> Properties -> Listen -> centang "Listen to this device" -> "Playback through this device" = **GP Mono 1** (tampil di input 1). Ada tambahan latensi dari jalur ini.
@@ -115,11 +122,22 @@ Semua perintah di PowerShell **Run as administrator**, dari folder `GPVirtualCab
 ## Uninstall
 
 ```powershell
+Set-ExecutionPolicy -Scope Process Bypass   # wajib di setiap jendela Admin baru
 tools\uninstall.ps1
 bcdedit /set testsigning off
 ```
 
+Hapus juga sertifikat uji yang masih tertinggal di Trusted Root dan Trusted Publisher (atau lewat `certmgr.msc`, cari "WDKTestCert"):
+
+```powershell
+foreach ($s in 'Root','TrustedPublisher') { Get-ChildItem "Cert:\LocalMachine\$s" | Where-Object Subject -like '*WDKTestCert*' | Remove-Item }
+```
+
 Reboot, lalu aktifkan kembali **Secure Boot** di BIOS bila sebelumnya dimatikan. Opsi uninstall: `-PackageDir`, `-DevconPath`.
+
+## Windows tidak mau boot setelah pasang
+
+Boot ke Safe Mode / Startup Settings (tahan Shift saat Restart), lalu jalankan `bcdedit /set testsigning off`, atau pulihkan dengan System Restore (`rstrui`). Di VM cukup kembalikan **snapshot VMware** (ambil snapshot sebelum memasang).
 
 ## Troubleshooting
 

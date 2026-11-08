@@ -47,23 +47,42 @@ foreach ($d in 'gpcable', 'tests') {
 $readme = @'
 GP Virtual Cable - paket uji VM
 ================================
-Jalankan semua perintah di PowerShell "Run as administrator" dari folder paket ini.
+PENTING: setiap jendela PowerShell Administrator BARU (termasuk setelah reboot) harus diawali:
+    Set-ExecutionPolicy -Scope Process Bypass
+dan pindah dulu ke folder paket ini, mis.:
+    cd C:\...\GPVirtualCable-kit      (ganti dengan lokasi ekstrak yang sebenarnya)
+
+Sebelum mulai: ambil SNAPSHOT VMware. Bila VM gagal boot, kembalikan ke snapshot itu.
 
 0. VM mati -> VM Settings > Options > Advanced > hapus centang "Enable secure boot".
-   Bila BitLocker aktif, suspend dulu.
-1. Set-ExecutionPolicy -Scope Process Bypass
+   Bila BitLocker aktif, SUSPEND dulu sebelum test-signing + reboot:
+   Suspend-BitLocker -MountPoint C: -RebootCount 1
+1. (PowerShell Admin, di folder paket)
+   Set-ExecutionPolicy -Scope Process Bypass
    .\tools\enable-testsigning.ps1        (lalu REBOOT VM)
-2. .\tools\install.ps1                   (lalu cek mmsys.cpl: 12 Playback "GP Mono 1".."GP Stereo 4"
+2. (jendela BARU, Admin; ulangi cd + Set-ExecutionPolicy di atas)
+   Set-ExecutionPolicy -Scope Process Bypass
+   .\tools\install.ps1                   (lalu cek mmsys.cpl: 12 Playback "GP Mono 1".."GP Stereo 4"
                                           + 1 Recording "GP Virtual Cable" 8 channel)
-3. Pasang Python 3.11+ (python.org, centang "Add to PATH"), lalu:
+3. Pasang Python 3.11+ (python.org, centang "Add to PATH"), buka jendela baru, lalu:
+   cd C:\...\GPVirtualCable-kit
    pip install -e ".\python[dev]"
    python -m gpcable.loopback            (harap: 12/12 passed)
-   cd python ; python -m pytest -m e2e ; cd ..
    python -m gpcable.meter
+   cd C:\...\GPVirtualCable-kit\python
+   python -m pytest -m e2e
 4. Opsional Driver Verifier: verifier /standard /driver GPVirtualCable.sys -> reboot -> putar audio
    ke 4 Playback + meter ~1 jam + sekali sleep/resume -> verifier /reset
 5. Kirim balik: nama perangkat di mmsys.cpl, keluaran loopback, hasil e2e, BSOD/glitch bila ada.
-Uninstall: .\tools\uninstall.ps1 ; bcdedit /set testsigning off
+
+Uninstall (jendela Admin baru, di folder paket):
+   Set-ExecutionPolicy -Scope Process Bypass
+   .\tools\uninstall.ps1
+   bcdedit /set testsigning off
+   Hapus sertifikat uji (Root dan TrustedPublisher):
+   foreach ($s in 'Root','TrustedPublisher') { Get-ChildItem "Cert:\LocalMachine\$s" | Where-Object Subject -like '*WDKTestCert*' | Remove-Item }
+Bila Windows tidak mau boot: Safe Mode / Startup Settings lalu "bcdedit /set testsigning off",
+atau System Restore (rstrui). Di VM cukup kembalikan snapshot.
 '@
 Set-Content -LiteralPath (Join-Path $kit 'BACA-SAYA.txt') -Value $readme -Encoding UTF8
 
