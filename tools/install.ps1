@@ -49,4 +49,4 @@ if (Test-DeviceInstalled -Devcon $devcon) {
 }
 $reboot = Assert-ExitOk -Tool 'devcon' -Code $LASTEXITCODE -What 'devcon'
 if ($reboot) { Write-Host "Reboot Windows lalu periksa perangkat." -ForegroundColor Yellow }
-Write-Host "Selesai. Periksa Device Manager ('GP Virtual Cable') dan mmsys.cpl." -ForegroundColor Green
+Write-Host "Selesai. Periksa Device Manager ('GP Virtual Cable') dan mmsys.cpl. Di GP Mix pilih Input 'GP Virtual Cable' pada 48000 Hz, lalu aktifkan channel input 1+2 ... 7+8." -ForegroundColor Green

@@ -1,5 +1,5 @@
 from gpcable.config import default_config_path, load_config
-from gpcable.devices import CableDevices, find_cable_devices
+from gpcable.devices import CableDeviceMap, find_cable_devices, name_matches
 
 HOSTAPIS = [{"name": "MME"}, {"name": "Windows WASAPI"}]
 
@@ -12,27 +12,49 @@ def cfg():
     return load_config(default_config_path())
 
 
-def test_matches_exact_cable_names_only():
+def test_name_matches_whole_word():
+    assert name_matches("Speakers (GP Mono 1)", "GP Mono 1")
+    assert not name_matches("Speakers (GP Mono 10)", "GP Mono 1")
+    assert not name_matches("Speakers (GP Mono 1)", "GP Mono 10")
+    assert not name_matches("Speakers (XGP Mono 1)", "GP Mono 1")
+
+
+def test_finds_twelve_outputs_and_one_capture():
+    c = cfg()
+    devices = [dev(f"Speakers ({cb.name})", 1, o=cb.channels) for cb in c.cables]
+    devices.append(dev(f"Microphone ({c.capture_name})", 1, i=c.capture_channels))
+    res = find_cable_devices(devices, HOSTAPIS, c)
+    assert isinstance(res, CableDeviceMap)
+    assert len(res.outputs) == 12
+    for n, cb in enumerate(c.cables):
+        assert res.outputs[cb.id] == n
+    assert res.capture == 12
+
+
+def test_mono_1_does_not_match_mono_10():
     devices = [
-        dev("Microphone (GP Mono 1)", 1, i=1),
+        dev("Speakers (GP Mono 10)", 1, o=1),
         dev("Speakers (GP Mono 1)", 1, o=1),
-        dev("Microphone (GP Mono 10)", 1, i=1),
     ]
     res = find_cable_devices(devices, HOSTAPIS, cfg())
-    assert res["Mono1"] == CableDevices(input_index=0, output_index=1)
+    assert res.outputs["Mono1"] == 1
 
 
-def test_ignores_non_wasapi_hostapi():
+def test_ignores_non_wasapi():
+    c = cfg()
     devices = [
-        dev("Microphone (GP Mono 1)", 0, i=1),
         dev("Speakers (GP Mono 1)", 0, o=1),
+        dev(f"Microphone ({c.capture_name})", 0, i=8),
     ]
-    res = find_cable_devices(devices, HOSTAPIS, cfg())
-    assert res["Mono1"] == CableDevices(None, None)
+    res = find_cable_devices(devices, HOSTAPIS, c)
+    assert res.outputs["Mono1"] is None
+    assert res.capture is None
 
 
-def test_missing_cable_reports_none():
+def test_missing_capture_is_none():
     devices = [dev("Speakers (GP Mono 1)", 1, o=1)]
     res = find_cable_devices(devices, HOSTAPIS, cfg())
-    assert len(res) == 12
-    assert res["Stereo4"] == CableDevices(None, None)
+    assert len(res.outputs) == 12
+    assert res.outputs["Mono1"] == 0
+    assert res.outputs["Stereo4"] is None
+    assert res.capture is None

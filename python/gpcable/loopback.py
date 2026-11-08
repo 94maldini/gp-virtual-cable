@@ -1,64 +1,64 @@
-"""End-to-end loopback check: play a tone into a cable's Playback endpoint,
-record it from the paired Recording endpoint, and analyse the result."""
+"""End-to-end loopback check: play tones into the 12 Playback endpoints and
+record the single 8-channel Recording endpoint "GP Virtual Cable"."""
 from __future__ import annotations
 
 import sys
+import threading
 import time
-from dataclasses import dataclass
+from collections.abc import Sequence
 
 import numpy as np
 import sounddevice as sd
 
 from gpcable.config import Cable, default_config_path, load_config
-from gpcable.devices import CableDevices, find_cable_devices
+from gpcable.devices import find_cable_devices
 from gpcable.levels import rms_dbfs
 
 REC_RATE = 48000
+CAPTURE_CHANNELS = 8
 DISCARD_S = 0.2
 AMPLITUDE = 0.5
+ONSET_DBFS = -40.0
 
-
-@dataclass(frozen=True)
-class LoopbackResult:
-    peak_freq_hz: float
-    level_dbfs: float
-    channels: int
+_INT_SCALE = {"int16": 32768.0, "int32": 2147483648.0}
 
 
 def tone_freq(cable: Cable) -> float:
     return 300.0 + 150.0 * cable.index
 
 
-def analyse(rec: np.ndarray, rate: int = REC_RATE) -> tuple[float, float]:
-    """Return (peak frequency Hz, RMS dBFS) of a (frames, channels) recording."""
-    mono = rec.mean(axis=1) if rec.ndim > 1 else rec
-    windowed = mono * np.hanning(len(mono))
-    spec = np.abs(np.fft.rfft(windowed))
-    peak = float(np.argmax(spec)) * rate / len(mono)
-    return peak, float(rms_dbfs(rec))
+def channel_peak(rec: np.ndarray, ch: int) -> tuple[float, float]:
+    """Return (peak frequency Hz via Hann + rFFT, RMS dBFS) of one channel."""
+    x = rec[:, ch]
+    spec = np.abs(np.fft.rfft(x * np.hanning(len(x))))
+    peak = float(np.argmax(spec)) * REC_RATE / len(x)
+    return peak, float(rms_dbfs(x))
 
 
-def record(
-    cable: Cable,
-    devs: CableDevices,
-    freq_hz: float | None,
+def record_route(
+    out_idx: int | None,
+    cap_idx: int,
+    tones: Sequence[tuple[int, float]],
+    channels_out: int,
     play_rate: int = REC_RATE,
-    play_channels: int | None = None,
     seconds: float = 1.0,
+    preroll_s: float = 0.0,
+    capture_dtype: str = "float32",
 ) -> np.ndarray:
-    """Record from the cable's input device. If freq_hz is None nothing is played."""
-    if devs.input_index is None:
-        raise RuntimeError(f"{cable.name}: recording device not found")
-    if freq_hz is not None and devs.output_index is None:
-        raise RuntimeError(f"{cable.name}: playback device not found")
-    play_channels = play_channels or cable.channels
+    """Play `tones` [(channel_out_index, freq_hz)] on the output stream (channel
+    index within the played stream, 0..channels_out-1) and record the 8-channel
+    capture endpoint. out_idx=None records only. Playback runs `preroll_s` before
+    recording starts; the first 200 ms of the recording are discarded.
+    Returns float32 (frames, 8)."""
     wasapi = sd.WasapiSettings(auto_convert=True)
     chunks: list[np.ndarray] = []
     phase = [0]
 
     def out_cb(outdata, frames, time_info, status):
         t = (phase[0] + np.arange(frames)) / play_rate
-        outdata[:] = (AMPLITUDE * np.sin(2 * np.pi * freq_hz * t))[:, None]
+        outdata[:] = 0
+        for ch, freq in tones:
+            outdata[:, ch] += (AMPLITUDE * np.sin(2 * np.pi * freq * t)).astype(np.float32)
         phase[0] += frames
 
     def in_cb(indata, frames, time_info, status):
@@ -67,18 +67,18 @@ def record(
     out = None
     inp = None
     try:
-        if freq_hz is not None:
+        if out_idx is not None:
             out = sd.OutputStream(
-                device=devs.output_index, samplerate=play_rate, channels=play_channels,
+                device=out_idx, samplerate=play_rate, channels=channels_out,
                 dtype="float32", callback=out_cb, extra_settings=wasapi,
             )
         inp = sd.InputStream(
-            device=devs.input_index, samplerate=REC_RATE, channels=cable.channels,
-            dtype="float32", callback=in_cb, extra_settings=wasapi,
+            device=cap_idx, samplerate=REC_RATE, channels=CAPTURE_CHANNELS,
+            dtype=capture_dtype, callback=in_cb, extra_settings=wasapi,
         )
         if out is not None:
             out.start()
-            time.sleep(0.3)  # let playback settle before recording
+            time.sleep(max(preroll_s, 0.3))  # let playback settle before recording
         inp.start()
         time.sleep(DISCARD_S + seconds)
     finally:
@@ -89,45 +89,113 @@ def record(
             if out is not None:
                 out.close()
     if not chunks:
-        raise RuntimeError(f"{cable.name}: no audio captured")
+        raise RuntimeError("no audio captured")
     rec = np.concatenate(chunks)
+    scale = _INT_SCALE.get(capture_dtype)
+    rec = rec.astype(np.float32) / scale if scale else rec.astype(np.float32)
     return rec[int(DISCARD_S * REC_RATE):]
 
 
-def run_loopback(
-    cable: Cable,
-    devs: CableDevices,
-    freq_hz: float,
-    play_rate: int = REC_RATE,
-    play_channels: int | None = None,
-    seconds: float = 1.0,
-) -> LoopbackResult:
-    rec = record(cable, devs, freq_hz, play_rate, play_channels, seconds)
-    peak, level = analyse(rec)
-    return LoopbackResult(peak_freq_hz=peak, level_dbfs=level, channels=rec.shape[1])
+def measure_latency_ms(out_idx: int, cap_idx: int, channels_out: int, first_channel: int) -> float:
+    """Latency from playing a burst to hearing it on capture channel first_channel-1.
+
+    Output plays silence, then (after ~0.5 s) a 1 kHz burst on every output
+    channel. The output callback stores the DAC time of the burst's first frame
+    (time_info.outputBufferDacTime + offset); the input callback finds the first
+    sample above -40 dBFS on the target channel and takes its time as
+    time_info.inputBufferAdcTime + offset. Both times use the same PortAudio
+    stream clock, so latency = adc_onset - dac_start (milliseconds)."""
+    wasapi = sd.WasapiSettings(auto_convert=True)
+    thresh = 10 ** (ONSET_DBFS / 20)
+    target = first_channel - 1
+    burst_start = int(0.5 * REC_RATE)
+    burst_len = int(0.3 * REC_RATE)
+    pos = [0]
+    dac_start: list[float | None] = [None]
+    adc_onset: list[float | None] = [None]
+    done = threading.Event()
+
+    def out_cb(outdata, frames, time_info, status):
+        outdata[:] = 0
+        n0 = pos[0]
+        idx = np.arange(n0, n0 + frames)
+        mask = (idx >= burst_start) & (idx < burst_start + burst_len)
+        if mask.any():
+            if dac_start[0] is None:
+                first = int(np.argmax(mask))
+                dac_start[0] = time_info.outputBufferDacTime + first / REC_RATE
+            tone = AMPLITUDE * np.sin(2 * np.pi * 1000.0 * idx / REC_RATE)
+            outdata[mask, :] = tone[mask, None].astype(np.float32)
+        pos[0] += frames
+
+    def in_cb(indata, frames, time_info, status):
+        if dac_start[0] is None or adc_onset[0] is not None:
+            return
+        hits = np.nonzero(np.abs(indata[:, target]) > thresh)[0]
+        if hits.size:
+            t = time_info.inputBufferAdcTime + hits[0] / REC_RATE
+            if t >= dac_start[0]:
+                adc_onset[0] = t
+                done.set()
+
+    out = None
+    inp = None
+    try:
+        out = sd.OutputStream(
+            device=out_idx, samplerate=REC_RATE, channels=channels_out,
+            dtype="float32", callback=out_cb, extra_settings=wasapi,
+        )
+        inp = sd.InputStream(
+            device=cap_idx, samplerate=REC_RATE, channels=CAPTURE_CHANNELS,
+            dtype="float32", callback=in_cb, extra_settings=wasapi,
+        )
+        inp.start()
+        out.start()
+        if not done.wait(timeout=3.0):
+            raise RuntimeError("latency: burst onset not detected on capture channel")
+    finally:
+        try:
+            if inp is not None:
+                inp.close()
+        finally:
+            if out is not None:
+                out.close()
+    return (adc_onset[0] - dac_start[0]) * 1000.0
 
 
 def main() -> int:
     cfg = load_config(default_config_path())
     found = find_cable_devices(sd.query_devices(), sd.query_hostapis(), cfg)
+    if found.capture is None:
+        print(f"FAIL {cfg.capture_name}: recording device not found")
+        print(f"0/{len(cfg.cables)} passed")
+        return 1
     passed = 0
     for cable in cfg.cables:
-        devs = found[cable.id]
+        out_idx = found.outputs[cable.id]
         freq = tone_freq(cable)
-        if devs.input_index is None or devs.output_index is None:
-            missing = "recording" if devs.input_index is None else "playback"
-            print(f"FAIL {cable.name}: {missing} device not found")
+        if out_idx is None:
+            print(f"FAIL {cable.name}: playback device not found")
             continue
         try:
-            r = run_loopback(cable, devs, freq)
+            rec = record_route(out_idx, found.capture,
+                               [(k, freq) for k in range(cable.channels)], cable.channels)
         except Exception as e:  # noqa: BLE001 - report any audio error per cable
             print(f"FAIL {cable.name}: {e}")
             continue
-        ok = (abs(r.peak_freq_hz - freq) < 5 and r.level_dbfs > -20
-              and r.channels == cable.channels)
+        dest = range(cable.first_channel - 1, cable.first_channel - 1 + cable.channels)
+        problems = []
+        for ch in range(CAPTURE_CHANNELS):
+            peak, level = channel_peak(rec, ch)
+            if ch in dest:
+                if abs(peak - freq) >= 5 or level <= -20:
+                    problems.append(f"ch{ch + 1}: {peak:.1f} Hz {level:.1f} dBFS")
+            elif level >= -90:
+                problems.append(f"ch{ch + 1} leak {level:.1f} dBFS")
+        ok = not problems
         passed += ok
-        print(f"{'PASS' if ok else 'FAIL'} {cable.name}: expected {freq:.0f} Hz, "
-              f"got {r.peak_freq_hz:.1f} Hz, {r.level_dbfs:.1f} dBFS, {r.channels} ch")
+        print(f"{'PASS' if ok else 'FAIL'} {cable.name}: {freq:.0f} Hz -> ch "
+              f"{dest[0] + 1}..{dest[-1] + 1}" + ("" if ok else " | " + "; ".join(problems)))
     print(f"{passed}/{len(cfg.cables)} passed")
     return 0 if passed == len(cfg.cables) else 1
 

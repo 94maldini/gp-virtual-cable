@@ -10,13 +10,12 @@ def cfg():
 
 
 @pytest.fixture(scope="session")
-def devs(cfg):
+def devmap(cfg):
     sd = pytest.importorskip("sounddevice")
     try:
         found = find_cable_devices(sd.query_devices(), sd.query_hostapis(), cfg)
     except Exception as e:  # PortAudio unavailable
         pytest.skip(f"cannot enumerate audio devices: {e}")
-    if not any(d.input_index is not None or d.output_index is not None
-               for d in found.values()):
-        pytest.skip("GP Virtual Cable driver not installed (no GP cable devices found)")
+    if found.capture is None:
+        pytest.skip("GP Virtual Cable driver not installed (no 'GP Virtual Cable' capture device found)")
     return found
