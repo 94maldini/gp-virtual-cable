@@ -45,7 +45,7 @@ public:
         CMiniportTopologySimpleAudioSample(FilterDesc, DeviceMaxChannels),
         m_DeviceType(DeviceType)
     {
-        ASSERT(m_DeviceType == eMicArrayDevice1);
+        ASSERT(m_DeviceType == eCableCaptureDevice);
     }
 
     ~CMicArrayMiniportTopology();

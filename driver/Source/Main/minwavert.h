@@ -228,7 +228,13 @@ protected:
 #pragma code_seg()
     BOOL IsRenderDevice()
     {
-        return m_DeviceType == eSpeakerDevice ? TRUE : FALSE;
+        return m_DeviceType == eCableRenderDevice ? TRUE : FALSE;
+    }
+
+    // Indeks cable endpoint ini (render: 0..GP_CABLE_COUNT-1; capture: GP_CAPTURE_CABLE_INDEX).
+    ULONG GetCableIndex()
+    {
+        return m_pMiniportPair->CableIndex;
     }
 
     BOOL IsSystemRenderPin(ULONG nPinId);

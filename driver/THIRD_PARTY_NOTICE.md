@@ -7,7 +7,13 @@ sampel `audio/simpleaudiosample` dari https://github.com/microsoft/Windows-drive
 - Hak cipta (c) Microsoft Corporation. Lisensi Microsoft Public License (MS-PL), teks di bawah (bukan MIT).
 
 Perubahan dari sampel asli dicatat di riwayat git repo ini
-(awal: `Source/Main/SimpleAudioSample.inx`, target OS `22000` menjadi `19041`).
+(awal: `Source/Main/SimpleAudioSample.inx`, target OS `22000` menjadi `19041`). Sejak Task 4 (GP Virtual
+Cable): solusi/target diganti nama menjadi `GPVirtualCable`, INX dihasilkan generator
+(`python/gpcable/templates/GPVirtualCable.inx.in`, dibangun dari INX sampel), tabel wave baru
+`Source/Filters/cablewavtable.h`, ring buffer `Source/Utilities/CableBuffer.*`, `gpring.h`/`gpmix.h`,
+dan stream (`minwavertstream.*`) tidak lagi memakai ToneGenerator/SaveData. File berikut bukan dari
+sampel: `cablewavtable.h`, `cables_generated.h`, `GPVirtualCable.inx`, `CableBuffer.*`, `gpring.h`,
+`gpmix.h`, `tests/`.
 
 ## Lisensi
 

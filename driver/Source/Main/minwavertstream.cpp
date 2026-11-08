@@ -4,6 +4,7 @@
 #include "endpoints.h"
 #include "minwavert.h"
 #include "minwavertstream.h"
+#include "gpmix.h"
 #define MINWAVERTSTREAM_POOLTAG 'SRWM'
 
 #pragma warning (disable : 4127)
@@ -81,6 +82,19 @@ Return Value:
         ExFreePoolWithTag( m_pWfExt, MINWAVERTSTREAM_POOLTAG );
         m_pWfExt = NULL;
     }
+
+    if (m_plGpAccumulator)
+    {
+        ExFreePoolWithTag( m_plGpAccumulator, MINWAVERTSTREAM_POOLTAG );
+        m_plGpAccumulator = NULL;
+    }
+
+    if (m_pGpScratch)
+    {
+        ExFreePoolWithTag( m_pGpScratch, MINWAVERTSTREAM_POOLTAG );
+        m_pGpScratch = NULL;
+    }
+
     if (m_pNotificationTimer)
     {
         ExDeleteTimer
@@ -102,58 +116,6 @@ Return Value:
 
 //=============================================================================
 #pragma code_seg("PAGE")
-
-NTSTATUS CMiniportWaveRTStream::ReadRegistrySettings()
-{
-    PAGED_CODE();
-
-    NTSTATUS                    ntStatus;
-    PDRIVER_OBJECT              DriverObject;
-    HANDLE                      DriverKey;
-    RTL_QUERY_REGISTRY_TABLE    paramTable[] = {
-        // QueryRoutine     Flags                                               Name                            EntryContext                            DefaultType                                                     DefaultData                                 DefaultLength
-        { NULL,   RTL_QUERY_REGISTRY_DIRECT | RTL_QUERY_REGISTRY_TYPECHECK, L"HostCaptureToneFrequency",        &m_ulHostCaptureToneFrequency,          (REG_DWORD << RTL_QUERY_REGISTRY_TYPECHECK_SHIFT) | REG_DWORD,  &m_ulHostCaptureToneFrequency,              sizeof(DWORD) },
-        { NULL,   RTL_QUERY_REGISTRY_DIRECT | RTL_QUERY_REGISTRY_TYPECHECK, L"HostCaptureToneAmplitude",        &m_dwHostCaptureToneAmplitude,          (REG_DWORD << RTL_QUERY_REGISTRY_TYPECHECK_SHIFT) | REG_DWORD,  &m_dwHostCaptureToneAmplitude,              sizeof(DWORD) },
-        { NULL,   RTL_QUERY_REGISTRY_DIRECT | RTL_QUERY_REGISTRY_TYPECHECK, L"HostCaptureToneDCOffset",         &m_dwHostCaptureToneDCOffset,           (REG_DWORD << RTL_QUERY_REGISTRY_TYPECHECK_SHIFT) | REG_DWORD,  &m_dwHostCaptureToneDCOffset,               sizeof(DWORD) },
-        { NULL,   RTL_QUERY_REGISTRY_DIRECT | RTL_QUERY_REGISTRY_TYPECHECK, L"HostCaptureToneInitialPhase",     &m_dwHostCaptureToneInitialPhase,       (REG_DWORD << RTL_QUERY_REGISTRY_TYPECHECK_SHIFT) | REG_DWORD,  &m_dwHostCaptureToneInitialPhase,           sizeof(DWORD) },
-        { NULL,   0,                                                        NULL,                               NULL,                                   0,                                                              NULL,                                       0 }
-    };
-
-    DriverObject = WdfDriverWdmGetDriverObject(WdfGetDriver());
-    DriverKey = NULL;
-    ntStatus = IoOpenDriverRegistryKey(DriverObject, 
-                                 DriverRegKeyParameters,
-                                 KEY_READ,
-                                 0,
-                                 &DriverKey);
-
-    if (!NT_SUCCESS(ntStatus))
-    {
-        return ntStatus;
-    }
-
-    ntStatus = RtlQueryRegistryValues(RTL_REGISTRY_HANDLE,
-                                  (PCWSTR) DriverKey,
-                                  &paramTable[0],
-                                  NULL,
-                                  NULL);
-
-    if (!NT_SUCCESS(ntStatus)) 
-    {
-        DPF(D_VERBOSE, ("RtlQueryRegistryValues failed, using default values, 0x%x", ntStatus));
-        //
-        // Don't return error because we will operate with default values.
-        //
-    }
-
-    if (DriverKey)
-    {
-        ZwClose(DriverKey);
-    }
-
-    return ntStatus;
-}
-
 NTSTATUS
 CMiniportWaveRTStream::Init
 ( 
@@ -228,10 +190,15 @@ Return Value:
     m_bEoSReceived = FALSE;
     m_bLastBufferRendered = FALSE;
 
-    m_ulHostCaptureToneFrequency = IsEqualGUID(SignalProcessingMode, AUDIO_SIGNALPROCESSINGMODE_RAW) ? 1000 : 2000;
-    m_dwHostCaptureToneAmplitude = 50;
-    m_dwHostCaptureToneDCOffset = 0;
-    m_dwHostCaptureToneInitialPhase = 0;
+    m_ulGpCableIndex = MAXULONG;    // diisi di bawah dari minipair
+    m_ulGpFrameBytes = 0;
+    m_ulGpBitsPerSample = 0;
+    m_bGpCopyProtect = FALSE;
+    RtlZeroMemory(m_GpCarry, sizeof(m_GpCarry));
+    m_ulGpCarryBytes = 0;
+    m_ulGpCarryOffset = 0;
+    m_plGpAccumulator = NULL;
+    m_pGpScratch = NULL;
 
     m_pPortStream = PortStream_;
     InitializeListHead(&m_NotificationList);
@@ -301,75 +268,55 @@ Return Value:
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
+    //
+    // GP Virtual Cable: render menulis ke ring cable-nya; capture menjumlahkan semua ring.
+    // Format sudah divalidasi oleh IsFormatSupported; dicek ulang karena ReadBytes/WriteBytes
+    // bergantung pada ukuran frame.
+    //
+    m_ulGpCableIndex = m_pMiniport->GetCableIndex();
+    m_ulGpFrameBytes = m_pWfExt->Format.nBlockAlign;
+    m_ulGpBitsPerSample = m_pWfExt->Format.wBitsPerSample;
+
     if (m_bCapture)
     {
-        ReadRegistrySettings();
-        DWORD toneFrequency = 0;
-        DWORD toneAmplitude = 0;
-        DWORD toneDCOffset = 0;
-        DWORD toneInitialPhase = 0;
-
-        double toneAmplitudeDouble = 0;
-        double toneDCOffsetDouble = 0;
-        double toneInitialPhaseDouble = 0;
-
-        toneFrequency = m_ulHostCaptureToneFrequency;
-        toneAmplitude = m_dwHostCaptureToneAmplitude;
-        toneDCOffset = m_dwHostCaptureToneDCOffset;
-        toneInitialPhase = m_dwHostCaptureToneInitialPhase;
-
-        if (labs(toneAmplitude) > 100)
+        if (m_pWfExt->Format.nChannels != GP_MIX_CHANNELS ||
+            (m_ulGpBitsPerSample != 16 && m_ulGpBitsPerSample != 24 && m_ulGpBitsPerSample != 32) ||
+            m_ulGpFrameBytes != GP_MIX_CHANNELS * (m_ulGpBitsPerSample / 8) ||
+            m_ulGpFrameBytes > sizeof(m_GpCarry))
         {
-            toneAmplitude = toneAmplitude > 0 ? 100 : -100;
+            return STATUS_INVALID_PARAMETER;
         }
 
-        if (labs(toneDCOffset) > 100)
+        //
+        // Akumulator dan scratch per cable: NonPaged, dialokasikan saat stream capture dibuat
+        // dan dibebaskan saat ditutup. Tidak ada alokasi di jalur DPC.
+        //
+        m_plGpAccumulator = (LONG*)ExAllocatePool2(POOL_FLAG_NON_PAGED,
+                                                   GP_MIX_CHUNK_FRAMES * GP_MIX_CHANNELS * sizeof(LONG),
+                                                   MINWAVERTSTREAM_POOLTAG);
+        if (m_plGpAccumulator == NULL)
         {
-            toneDCOffset = toneDCOffset > 0 ? 100 : -100;
+            return STATUS_INSUFFICIENT_RESOURCES;
         }
 
-        DWORD abssum = labs(toneAmplitude) + labs(toneDCOffset);
-
-        if (abssum > 100)
+        m_pGpScratch = (BYTE*)ExAllocatePool2(POOL_FLAG_NON_PAGED,
+                                              (SIZE_T)GpCableCount() * GP_MIX_SCRATCH_BYTES_PER_CABLE,
+                                              MINWAVERTSTREAM_POOLTAG);
+        if (m_pGpScratch == NULL)
         {
-            toneAmplitudeDouble = ((double)toneAmplitude) / abssum;
-            toneDCOffsetDouble = ((double)toneDCOffset) / abssum;
-        }
-        else
-        {
-            toneAmplitudeDouble = ((double)toneAmplitude) / 100.0;
-            toneDCOffsetDouble = ((double)toneDCOffset) / 100.0;
-        }
-
-        if (labs(toneInitialPhase) > 31416)
-        {
-            toneInitialPhase = toneInitialPhase > 0 ? 31416 : -31416;
-        }
-
-        toneInitialPhaseDouble = (double)toneInitialPhase / 10000;
-
-        ntStatus = m_ToneGenerator.Init(toneFrequency, toneAmplitudeDouble, toneDCOffsetDouble, toneInitialPhaseDouble, m_pWfExt);
-
-        if (!NT_SUCCESS(ntStatus))
-        {
-            return ntStatus;
+            return STATUS_INSUFFICIENT_RESOURCES;
         }
     }
-    else if (!g_DoNotCreateDataFiles)
+    else
     {
-        //
-        // Create an output file for the render data.
-        //
-        DPF(D_TERSE, ("SaveData %p", &m_SaveData));
-        ntStatus = m_SaveData.SetDataFormat(DataFormat_);
-        if (NT_SUCCESS(ntStatus))
+        ULONG channels = GpCableChannels(m_ulGpCableIndex);
+        if (channels == 0 ||
+            m_pWfExt->Format.nChannels != channels ||
+            m_ulGpBitsPerSample != GP_CABLE_BYTES_PER_SAMPLE * 8 ||
+            m_ulGpFrameBytes != GP_CABLE_BYTES_PER_SAMPLE * channels ||
+            m_ulGpFrameBytes > sizeof(m_GpCarry))
         {
-            ntStatus = m_SaveData.Initialize();
-        }
-    
-        if (!NT_SUCCESS(ntStatus))
-        {
-            return ntStatus;
+            return STATUS_INVALID_PARAMETER;
         }
     }
 
@@ -482,19 +429,6 @@ NTSTATUS CMiniportWaveRTStream::AllocateBufferWithNotification
     }
 
     RequestedSize_ -= RequestedSize_ % (m_pWfExt->Format.nBlockAlign);
-    
-    if (!m_bCapture && (!g_DoNotCreateDataFiles))
-    {
-        NTSTATUS ntStatus;
-        
-        // Simple Audio Sample uses following buffer to hold data before writing to a file.
-        // Allocating larger buffer will reduce File I/O operations.
-        ntStatus = m_SaveData.SetMaxWriteSize(RequestedSize_ * 4);
-        if (!NT_SUCCESS(ntStatus))
-        {
-            return ntStatus;
-        }
-    }
 
     PHYSICAL_ADDRESS highAddress;
     highAddress.HighPart = 0;
@@ -1196,13 +1130,11 @@ NTSTATUS CMiniportWaveRTStream::SetState
             m_bEoSReceived = FALSE;
             m_bLastBufferRendered = FALSE;
 
-            KeReleaseSpinLock(&m_PositionSpinLock, oldIrql);
+            // Posisi linear kembali ke 0: buang sisa frame parsial.
+            m_ulGpCarryBytes = 0;
+            m_ulGpCarryOffset = 0;
 
-            // Wait until all work items are completed.
-            if (!m_bCapture && !g_DoNotCreateDataFiles)
-            {
-                m_SaveData.WaitAllWorkItems();
-            }
+            KeReleaseSpinLock(&m_PositionSpinLock, oldIrql);
             break;
 
         case KSSTATE_ACQUIRE:
@@ -1247,6 +1179,15 @@ NTSTATUS CMiniportWaveRTStream::SetState
             break;
 
         case KSSTATE_RUN:
+            //
+            // GP Virtual Cable: Playback mulai dari ring kosong supaya data lama tidak ikut
+            // terdengar dan latensi tidak menumpuk.
+            //
+            if (!m_bCapture)
+            {
+                GpCableReset(m_ulGpCableIndex);
+            }
+
             // Start DMA
             LARGE_INTEGER ullPerfCounterTemp;
             ullPerfCounterTemp = KeQueryPerformanceCounter(&m_ullPerformanceCounterFrequency);
@@ -1332,7 +1273,7 @@ VOID CMiniportWaveRTStream::UpdatePosition
 
     if (m_bCapture)
     {
-        // Write sine wave to buffer.
+        // Mix all cable rings into the DMA buffer.
         WriteBytes(ByteDisplacement);
     }
     else
@@ -1364,11 +1305,8 @@ VOID CMiniportWaveRTStream::UpdatePosition
             m_bLastBufferRendered = TRUE;
         }
 
-        if (!g_DoNotCreateDataFiles)
-        {
-            // Read from buffer and write to a file.
-            ReadBytes(ByteDisplacement);
-        }
+        // Read from the DMA buffer and write to this cable's ring.
+        ReadBytes(ByteDisplacement);
     }
     
     // Increment the DMA position by the number of bytes displaced since the last
@@ -1389,6 +1327,107 @@ VOID CMiniportWaveRTStream::UpdatePosition
 
 //=============================================================================
 #pragma code_seg()
+VOID CMiniportWaveRTStream::GpCopyToDma
+(
+    _In_ ULONG Offset,
+    _In_reads_bytes_(Count) const BYTE* Source,
+    _In_ ULONG Count
+)
+/*++
+
+Routine Description:
+
+  Salin Count byte ke buffer DMA mulai Offset, melingkar di akhir buffer.
+
+--*/
+{
+    while (Count > 0)
+    {
+        ULONG run = min(Count, m_ulDmaBufferSize - Offset);
+        RtlCopyMemory(m_pDmaBuffer + Offset, Source, run);
+        Source += run;
+        Count -= run;
+        Offset = (Offset + run) % m_ulDmaBufferSize;
+    }
+}
+
+//=============================================================================
+#pragma code_seg()
+VOID CMiniportWaveRTStream::GpCopyFromDma
+(
+    _Out_writes_bytes_(Count) BYTE* Destination,
+    _In_ ULONG Offset,
+    _In_ ULONG Count
+)
+/*++
+
+Routine Description:
+
+  Salin Count byte dari buffer DMA mulai Offset, melingkar di akhir buffer.
+
+--*/
+{
+    while (Count > 0)
+    {
+        ULONG run = min(Count, m_ulDmaBufferSize - Offset);
+        RtlCopyMemory(Destination, m_pDmaBuffer + Offset, run);
+        Destination += run;
+        Count -= run;
+        Offset = (Offset + run) % m_ulDmaBufferSize;
+    }
+}
+
+//=============================================================================
+#pragma code_seg()
+VOID CMiniportWaveRTStream::GpMixFrames
+(
+    _In_ ULONG Frames,
+    _Out_writes_bytes_(Frames * m_ulGpFrameBytes) BYTE* Destination
+)
+/*++
+
+Routine Description:
+
+  Capture: baca Frames frame dari tiap ring cable, jumlahkan ke channel tujuannya (saturasi 24-bit)
+  dan tulis Frames frame interleaved 8 channel dalam format stream ke Destination.
+  Frames <= GP_MIX_CHUNK_FRAMES. Memegang paling banyak satu lock cable pada satu waktu.
+
+--*/
+{
+    NT_ASSERT(Frames <= GP_MIX_CHUNK_FRAMES);
+
+    RtlZeroMemory(m_plGpAccumulator, Frames * GP_MIX_CHANNELS * sizeof(LONG));
+
+    ULONG cableCount = GpCableCount();
+    for (ULONG i = 0; i < cableCount; i++)
+    {
+        ULONG channels = GpCableChannels(i);
+        if (channels == 0)
+        {
+            // Rute nol channel bukan error: tidak ada yang dijumlahkan.
+            continue;
+        }
+
+        BYTE* scratch = m_pGpScratch + i * GP_MIX_SCRATCH_BYTES_PER_CABLE;
+        ULONG got = GpCableReadFrames(i, scratch, Frames);
+        if (got == 0)
+        {
+            // Ring kosong: cable ini diam pada potongan ini.
+            continue;
+        }
+
+        BOOLEAN ok = GpMixAccumulate(m_plGpAccumulator, got, GP_MIX_CHANNELS,
+                                     scratch, channels, GpCableFirstChannel(i));
+        // FALSE untuk rute yang dikonfigurasi berarti tabel rute rusak.
+        NT_ASSERT(ok);
+        UNREFERENCED_PARAMETER(ok);
+    }
+
+    GpMixWrite(m_plGpAccumulator, Frames, GP_MIX_CHANNELS, Destination, m_ulGpBitsPerSample);
+}
+
+//=============================================================================
+#pragma code_seg()
 VOID CMiniportWaveRTStream::WriteBytes
 (
     _In_ ULONG ByteDisplacement
@@ -1397,26 +1436,69 @@ VOID CMiniportWaveRTStream::WriteBytes
 
 Routine Description:
 
-This function writes the audio buffer using a sine wave generator
+  Capture: isi ByteDisplacement byte buffer DMA (mulai posisi linear saat ini) dengan campuran
+  semua cable. Aliran byte selalu tersusun dari frame utuh: frame terakhir yang hanya muat sebagian
+  disimpan di m_GpCarry dan sisanya ditulis di awal panggilan berikutnya.
 
 Arguments:
 
-ByteDisplacement - # of bytes to process.
+  ByteDisplacement - # of bytes to process.
 
 --*/
 {
-    ULONG bufferOffset = m_ullLinearPosition % m_ulDmaBufferSize;
-
-    // Normally this will loop no more than once for a single wrap, but if
-    // many bytes have been displaced then this may loops many times.
-    while (ByteDisplacement > 0)
+    if (m_pDmaBuffer == NULL || m_ulDmaBufferSize == 0 || m_ulGpFrameBytes == 0 ||
+        m_plGpAccumulator == NULL || m_pGpScratch == NULL)
     {
-        ULONG runWrite = min(ByteDisplacement, m_ulDmaBufferSize - bufferOffset);
-        
-        m_ToneGenerator.GenerateSine(m_pDmaBuffer + bufferOffset, runWrite);
-           	
-        bufferOffset = (bufferOffset + runWrite) % m_ulDmaBufferSize;
-        ByteDisplacement -= runWrite;
+        return;
+    }
+
+    const ULONG frameBytes = m_ulGpFrameBytes;
+    ULONG bufferOffset = (ULONG)(m_ullLinearPosition % m_ulDmaBufferSize);
+    ULONG remaining = ByteDisplacement;
+
+    // 1. Sisa frame parsial dari panggilan sebelumnya.
+    if (m_ulGpCarryBytes > 0 && remaining > 0)
+    {
+        ULONG n = min(remaining, m_ulGpCarryBytes);
+        GpCopyToDma(bufferOffset, m_GpCarry + m_ulGpCarryOffset, n);
+        bufferOffset = (bufferOffset + n) % m_ulDmaBufferSize;
+        m_ulGpCarryOffset += n;
+        m_ulGpCarryBytes -= n;
+        remaining -= n;
+    }
+
+    // 2. Frame utuh, langsung ke buffer DMA, per potongan <= GP_MIX_CHUNK_FRAMES yang tidak melewati
+    //    akhir buffer. Ukuran buffer DMA kelipatan nBlockAlign dan aliran dimulai dari posisi 0,
+    //    jadi bufferOffset di sini selalu di awal frame.
+    ULONG frames = remaining / frameBytes;
+    while (frames > 0)
+    {
+        ULONG untilWrap = (m_ulDmaBufferSize - bufferOffset) / frameBytes;
+        if (untilWrap == 0)
+        {
+            // Tidak seharusnya terjadi (buffer tidak selaras frame): lewat m_GpCarry.
+            GpMixFrames(1, m_GpCarry);
+            GpCopyToDma(bufferOffset, m_GpCarry, frameBytes);
+            bufferOffset = (bufferOffset + frameBytes) % m_ulDmaBufferSize;
+            frames--;
+            continue;
+        }
+
+        ULONG chunk = min(frames, min((ULONG)GP_MIX_CHUNK_FRAMES, untilWrap));
+        GpMixFrames(chunk, m_pDmaBuffer + bufferOffset);
+        bufferOffset = (bufferOffset + chunk * frameBytes) % m_ulDmaBufferSize;
+        frames -= chunk;
+    }
+
+    // 3. Frame terakhir yang hanya muat sebagian: campur satu frame utuh, tulis bagian depannya,
+    //    simpan sisanya untuk panggilan berikutnya.
+    ULONG tail = remaining % frameBytes;
+    if (tail > 0)
+    {
+        GpMixFrames(1, m_GpCarry);
+        GpCopyToDma(bufferOffset, m_GpCarry, tail);
+        m_ulGpCarryOffset = tail;
+        m_ulGpCarryBytes = frameBytes - tail;
     }
 }
 
@@ -1430,24 +1512,78 @@ VOID CMiniportWaveRTStream::ReadBytes
 
 Routine Description:
 
-This function reads the audio buffer and saves the data in a file.
+  Render: salin ByteDisplacement byte buffer DMA (mulai posisi linear saat ini) ke ring cable ini,
+  selalu dalam frame utuh. Byte frame yang belum lengkap disimpan di m_GpCarry dan dilengkapi pada
+  panggilan berikutnya, sehingga aliran byte tetap bersambung.
 
 Arguments:
 
-ByteDisplacement - # of bytes to process.
+  ByteDisplacement - # of bytes to process.
 
 --*/
 {
-    ULONG bufferOffset = m_ullLinearPosition % m_ulDmaBufferSize;
-
-    // Normally this will loop no more than once for a single wrap, but if
-    // many bytes have been displaced then this may loops many times.
-    while (ByteDisplacement > 0)
+    if (m_pDmaBuffer == NULL || m_ulDmaBufferSize == 0 || m_ulGpFrameBytes == 0)
     {
-        ULONG runWrite = min(ByteDisplacement, m_ulDmaBufferSize - bufferOffset);
-        m_SaveData.WriteData(m_pDmaBuffer + bufferOffset, runWrite);
-        bufferOffset = (bufferOffset + runWrite) % m_ulDmaBufferSize;
-        ByteDisplacement -= runWrite;
+        return;
+    }
+
+    const ULONG frameBytes = m_ulGpFrameBytes;
+    const ULONG cableIndex = m_ulGpCableIndex;
+    const BOOLEAN forward = !m_bGpCopyProtect;
+    ULONG bufferOffset = (ULONG)(m_ullLinearPosition % m_ulDmaBufferSize);
+    ULONG remaining = ByteDisplacement;
+
+    // 1. Lengkapi frame parsial dari panggilan sebelumnya.
+    if (m_ulGpCarryBytes > 0 && remaining > 0)
+    {
+        ULONG n = min(remaining, frameBytes - m_ulGpCarryBytes);
+        GpCopyFromDma(m_GpCarry + m_ulGpCarryBytes, bufferOffset, n);
+        bufferOffset = (bufferOffset + n) % m_ulDmaBufferSize;
+        m_ulGpCarryBytes += n;
+        remaining -= n;
+
+        if (m_ulGpCarryBytes == frameBytes)
+        {
+            if (forward)
+            {
+                GpCableWrite(cableIndex, m_GpCarry, frameBytes);
+            }
+            m_ulGpCarryBytes = 0;
+        }
+    }
+
+    // 2. Frame utuh langsung dari buffer DMA, per segmen sampai akhir buffer.
+    ULONG whole = remaining - (remaining % frameBytes);
+    remaining -= whole;
+    while (whole > 0)
+    {
+        ULONG run = min(whole, m_ulDmaBufferSize - bufferOffset);
+        run -= run % frameBytes;
+        if (run == 0)
+        {
+            // Tidak seharusnya terjadi (buffer tidak selaras frame): satu frame lewat m_GpCarry.
+            GpCopyFromDma(m_GpCarry, bufferOffset, frameBytes);
+            if (forward)
+            {
+                GpCableWrite(cableIndex, m_GpCarry, frameBytes);
+            }
+            run = frameBytes;
+        }
+        else if (forward)
+        {
+            GpCableWrite(cableIndex, m_pDmaBuffer + bufferOffset, run);
+        }
+
+        bufferOffset = (bufferOffset + run) % m_ulDmaBufferSize;
+        whole -= run;
+    }
+
+    // 3. Awal frame yang belum lengkap: simpan untuk panggilan berikutnya.
+    if (remaining > 0)
+    {
+        NT_ASSERT(m_ulGpCarryBytes == 0);
+        GpCopyFromDma(m_GpCarry, bufferOffset, remaining);
+        m_ulGpCarryBytes = remaining;
     }
 }
 
@@ -1500,10 +1636,10 @@ Return Value:
     }
 
     //
-    // Simple Audio Sample writes each stream seperately to disk. If the rights for this
-    // stream indicates that the stream is CopyProtected, stop writing to disk.
+    // GP Virtual Cable (pengganti CSaveData::Disable di sampel): bila stream ini CopyProtect,
+    // datanya tidak diteruskan ke cable sehingga Recording hanya menerima diam dari stream ini.
     //
-    m_SaveData.Disable(drmRights->CopyProtect);
+    m_bGpCopyProtect = drmRights->CopyProtect ? TRUE : FALSE;
 
     //
     // From MSDN:

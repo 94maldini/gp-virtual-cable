@@ -122,8 +122,8 @@ Abstract:
 
 typedef enum
 {
-    eSpeakerDevice = 0,
-    eMicArrayDevice1,
+    eCableRenderDevice = 0,
+    eCableCaptureDevice,
     eMaxDeviceType,
 } eDeviceType;
 
@@ -229,6 +229,9 @@ typedef struct _ENDPOINT_MINIPAIR
 
     // General endpoint flags (one of more ENDPOINT_<flag-type>, see above)
     ULONG                           DeviceFlags;
+
+    // GP Virtual Cable: index ke g_GpCableRoutes (render), atau GP_CAPTURE_CABLE_INDEX (capture).
+    ULONG                           CableIndex;
 } ENDPOINT_MINIPAIR;
 
 //=============================================================================

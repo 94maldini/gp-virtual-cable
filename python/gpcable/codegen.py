@@ -86,7 +86,7 @@ def render_header(cfg: CableConfig) -> str:
     items = ",\n".join(f"    &GpRender{c.id}" for c in cfg.cables)
     parts.append(f"static\nPENDPOINT_MINIPAIR g_RenderEndpoints[] =\n{{\n{items}\n}};\n")
     parts.append("static\nPENDPOINT_MINIPAIR g_CaptureEndpoints[] =\n{\n    &GpCapture\n};\n")
-    routes = ",\n".join(f"    {{ {c.channels}, {c.first_channel - 1} }},  // {c.id}" for c in cfg.cables)
+    routes = "\n".join(f"    {{ {c.channels}, {c.first_channel - 1} }},  // {c.id}" for c in cfg.cables)
     parts.append(f"static const GP_CABLE_ROUTE g_GpCableRoutes[GP_CABLE_COUNT] =\n{{\n{routes}\n}};\n")
     parts.append("#endif // _GP_CABLES_GENERATED_H_\n")
     return "\n".join(parts)

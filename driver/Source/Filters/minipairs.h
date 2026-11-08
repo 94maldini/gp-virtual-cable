@@ -8,7 +8,11 @@ Module Name:
 
 Abstract:
 
-    Local audio endpoint filter definitions. 
+    Local audio endpoint filter definitions.
+
+    GP Virtual Cable: tabel wave ada di cablewavtable.h; pasangan miniport (12 render + 1 capture),
+    g_RenderEndpoints, g_CaptureEndpoints dan g_GpCableRoutes dihasilkan dari cables.toml ke
+    cables_generated.h (python -m gpcable.codegen).
 --*/
 
 #ifndef _SIMPLEAUDIOSAMPLE_MINIPAIRS_H_
@@ -16,11 +20,11 @@ Abstract:
 
 #include "speakertopo.h"
 #include "speakertoptable.h"
-#include "speakerwavtable.h"
 
 #include "micarraytopo.h"
 #include "micarray1toptable.h"
-#include "micarraywavtable.h"
+
+#include "cablewavtable.h"
 
 
 NTSTATUS
@@ -48,125 +52,18 @@ CreateMiniportTopologySimpleAudioSample
 );
 
 //
-// Render miniports.
+// Render & capture miniport pairs, g_RenderEndpoints[], g_CaptureEndpoints[], g_GpCableRoutes[].
 //
+#include "cables_generated.h"
 
-/*********************************************************************
-* Topology/Wave bridge connection for speaker (internal)             *
-*                                                                    *
-*              +------+                +------+                      *
-*              | Wave |                | Topo |                      *
-*              |      |                |      |                      *
-* System   --->|0    1|--------------->|0    1|---> Line Out         *
-*              |      |                |      |                      *
-*              +------+                +------+                      *
-*********************************************************************/
-static
-PHYSICALCONNECTIONTABLE SpeakerTopologyPhysicalConnections[] =
-{
-    {
-        KSPIN_TOPO_WAVEOUT_SOURCE,  // TopologyIn
-        KSPIN_WAVE_RENDER3_SOURCE,   // WaveOut
-        CONNECTIONTYPE_WAVE_OUTPUT
-    }
-};
-
-static
-ENDPOINT_MINIPAIR SpeakerMiniports =
-{
-    eSpeakerDevice,
-    L"TopologySpeaker",                                     // make sure this or the template name matches with KSNAME_TopologySpeaker in the inf's [Strings] section 
-    NULL,                                                   // optional template name
-    CreateMiniportTopologySimpleAudioSample,
-    &SpeakerTopoMiniportFilterDescriptor,
-    0, NULL,                                                // Interface properties
-    L"WaveSpeaker",                                         // make sure this or the template name matches with KSNAME_WaveSpeaker in the inf's [Strings] section
-    NULL,                                                   // optional template name
-    CreateMiniportWaveRTSimpleAudioSample,
-    &SpeakerWaveMiniportFilterDescriptor,
-    0,                                                      // Interface properties
-    NULL,
-    SPEAKER_DEVICE_MAX_CHANNELS,
-    SpeakerPinDeviceFormatsAndModes,
-    SIZEOF_ARRAY(SpeakerPinDeviceFormatsAndModes),
-    SpeakerTopologyPhysicalConnections,
-    SIZEOF_ARRAY(SpeakerTopologyPhysicalConnections),
-    ENDPOINT_NO_FLAGS,
-};
-
-//
-// Capture miniports.
-//
-
-/*********************************************************************
-* Topology/Wave bridge connection for mic array  1 (front)           *
-*                                                                    *
-*              +------+    +------+                                  *
-*              | Topo |    | Wave |                                  *
-*              |      |    |      |                                  *
-*  Mic in  --->|0    1|===>|0    1|---> Capture Host Pin             *
-*              |      |    |      |                                  *
-*              +------+    +------+                                  *
-*********************************************************************/
-static
-PHYSICALCONNECTIONTABLE MicArray1TopologyPhysicalConnections[] =
-{
-    {
-        KSPIN_TOPO_BRIDGE,          // TopologyOut
-        KSPIN_WAVE_BRIDGE,          // WaveIn
-        CONNECTIONTYPE_TOPOLOGY_OUTPUT
-    }
-};
-
-static
-ENDPOINT_MINIPAIR MicArray1Miniports =
-{
-    eMicArrayDevice1,
-    L"TopologyMicArray1",                   // make sure this or the template name matches with KSNAME_TopologyMicArray1 in the inf's [Strings] section 
-    NULL,                                   // optional template name
-    CreateMicArrayMiniportTopology,
-    &MicArray1TopoMiniportFilterDescriptor,
-    0, NULL,                                // Interface properties
-    L"WaveMicArray1",                       // make sure this or the tempalte name matches with KSNAME_WaveMicArray1 in the inf's [Strings] section
-    NULL,                                   // optional template name
-    CreateMiniportWaveRTSimpleAudioSample,
-    &MicArrayWaveMiniportFilterDescriptor,
-    0,                                      // Interface properties
-    NULL,
-    MICARRAY_DEVICE_MAX_CHANNELS,
-    MicArrayPinDeviceFormatsAndModes,
-    SIZEOF_ARRAY(MicArrayPinDeviceFormatsAndModes),
-    MicArray1TopologyPhysicalConnections,
-    SIZEOF_ARRAY(MicArray1TopologyPhysicalConnections),
-    ENDPOINT_NO_FLAGS,
-};
-
-
-//=============================================================================
-//
-// Render miniport pairs. NOTE: the split of render and capture is arbitrary and
-// unnessary, this array could contain capture endpoints.
-//
-static
-PENDPOINT_MINIPAIR  g_RenderEndpoints[] = 
-{
-    &SpeakerMiniports,
-};
+C_ASSERT(GP_CAPTURE_CHANNELS == CABLE_CAPTURE_CHANNELS);
 
 #define g_cRenderEndpoints  (SIZEOF_ARRAY(g_RenderEndpoints))
 
-//=============================================================================
-//
-// Capture miniport pairs. NOTE: the split of render and capture is arbitrary and
-// unnessary, this array could contain render endpoints.
-//
-static
-PENDPOINT_MINIPAIR  g_CaptureEndpoints[] =
-{
-    &MicArray1Miniports,
-};
-
 #define g_cCaptureEndpoints (SIZEOF_ARRAY(g_CaptureEndpoints))
+
+C_ASSERT(SIZEOF_ARRAY(g_RenderEndpoints) == GP_CABLE_COUNT);
+C_ASSERT(SIZEOF_ARRAY(g_GpCableRoutes) == GP_CABLE_COUNT);
 
 //=============================================================================
 //

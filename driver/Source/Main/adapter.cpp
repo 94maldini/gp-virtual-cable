@@ -22,6 +22,7 @@ Abstract:
 #include "definitions.h"
 #include "endpoints.h"
 #include "minipairs.h"
+#include "CableBuffer.h"
 
 typedef void (*fnPcDriverUnload) (PDRIVER_OBJECT);
 fnPcDriverUnload gPCDriverUnloadRoutine = NULL;
@@ -120,6 +121,10 @@ Environment:
         WdfDriverMiniportUnload(WdfGetDriver());
     }
 Done:
+    //
+    // GP Virtual Cable: bebaskan ring buffer semua cable (semua stream sudah ditutup).
+    //
+    GpCablesCleanup();
     return;
 }
 
@@ -325,6 +330,15 @@ Return Value:
         Done);
 
     //
+    // GP Virtual Cable: alokasikan ring buffer semua cable sebelum endpoint dipasang.
+    //
+    ntStatus = GpCablesInitialize();
+    IF_FAILED_ACTION_JUMP(
+        ntStatus,
+        DPF(D_ERROR, ("GpCablesInitialize failed, 0x%x", ntStatus)),
+        Done);
+
+    //
     // Tell the class driver to initialize the driver.
     //
     ntStatus =  PcInitializeAdapterDriver(DriverObject,
@@ -360,6 +374,7 @@ Done:
             WdfDriverMiniportUnload(WdfGetDriver());
         }
 
+        GpCablesCleanup();
         ReleaseRegistryStringBuffer();
     }
     

@@ -1,5 +1,7 @@
 name: build-driver
 
+# CI tidak dipakai saat ini (akun GitHub terkunci masalah billing); build lokal lewat
+# tools\build-driver.ps1. Workflow dipertahankan agar bisa dipakai lagi tanpa menulis ulang.
 on:
   workflow_dispatch:
 
@@ -15,8 +17,27 @@ jobs:
           .\tools\test-gpcore.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+  codegen-check:
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Jalankan codegen dan pastikan file hasil generator tidak berubah
+        shell: pwsh
+        run: |
+          python -m pip install --quiet ./python
+          Push-Location python
+          python -m gpcable.codegen --out-root ..
+          Pop-Location
+          git diff --exit-code -- driver/Source/Filters/cables_generated.h driver/Source/Main/GPVirtualCable.inx
+          if ($LASTEXITCODE -ne 0) { throw 'File hasil generator tidak sama dengan hasil codegen (jalankan codegen lalu commit).' }
+
   build:
-    needs: core-tests
+    needs: [core-tests, codegen-check]
     runs-on: windows-2025-vs2026
     steps:
       - uses: actions/checkout@v4
@@ -27,20 +48,34 @@ jobs:
       - name: Cari msbuild
         shell: pwsh
         run: |
-          $ms = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -prerelease -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" | Select-Object -First 1
+          # MSBuild 64-bit: tugas verifikasi INF WDK memuat bin\<arsitektur proses>\InfVerif.dll.
+          $ms = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -prerelease -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\amd64\MSBuild.exe" | Select-Object -First 1
+          if (-not $ms) {
+            $ms = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -prerelease -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" | Select-Object -First 1
+          }
           Write-Host "msbuild: $ms"
           "MSBUILD=$ms" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - name: Build Debug x64 dengan NT_TARGET_VERSION 0x0A000008
+      - name: Build Debug x64 (NT_TARGET_VERSION 0x0A000008, Code Analysis)
         shell: pwsh
         run: |
-          & $env:MSBUILD driver\SimpleAudioSample.sln /p:Configuration=Debug /p:Platform=x64 /p:_NT_TARGET_VERSION=0x0A000008 /v:minimal /fl "/flp:logfile=msbuild.log;verbosity=detailed"
+          & $env:MSBUILD driver\GPVirtualCable.sln /p:Configuration=Debug /p:Platform=x64 /p:_NT_TARGET_VERSION=0x0A000008 /p:RunCodeAnalysis=true /v:minimal /fl "/flp:logfile=msbuild.log;verbosity=detailed"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Bukti _NT_TARGET_VERSION di command line cl
         shell: pwsh
         run: |
           Select-String -Path msbuild.log -Pattern '_NT_TARGET_VERSION' | Select-Object -First 6 | ForEach-Object { $_.Line.Trim().Substring(0, [Math]::Min(400, $_.Line.Trim().Length)) }
+
+      - name: infverif /w pada INF hasil build
+        shell: pwsh
+        run: |
+          $inf = Get-ChildItem driver -Recurse -Filter GPVirtualCable.inf | Where-Object { $_.DirectoryName -like '*package*' } | Select-Object -First 1
+          if (-not $inf) { throw 'GPVirtualCable.inf di folder package tidak ditemukan' }
+          $iv = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Tools\*\x64\infverif.exe", "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\infverif.exe" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $iv) { throw 'infverif.exe tidak ditemukan' }
+          & $iv.FullName /w $inf.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Diagnostik hasil build
         if: always()
@@ -53,12 +88,15 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force stage | Out-Null
-          $pkg = Get-ChildItem driver -Recurse -Filter SimpleAudioSample.sys | Where-Object { $_.DirectoryName -like '*package*' } | Select-Object -First 1
-          if (-not $pkg) { throw 'SimpleAudioSample.sys di folder package tidak ditemukan' }
+          $pkg = Get-ChildItem driver -Recurse -Filter GPVirtualCable.sys | Where-Object { $_.DirectoryName -like '*package*' } | Select-Object -First 1
+          if (-not $pkg) { throw 'GPVirtualCable.sys di folder package tidak ditemukan' }
           Write-Host "package dir: $($pkg.DirectoryName)"
           Copy-Item "$($pkg.DirectoryName)\*" stage -Recurse -Force
+          foreach ($f in 'GPVirtualCable.sys', 'GPVirtualCable.inf', 'GPVirtualCable.cat') {
+            if (-not (Test-Path (Join-Path stage $f))) { throw "Artefak wajib tidak ada: $f" }
+          }
           $cer = Get-ChildItem driver -Recurse -Filter *.cer | Select-Object -First 1
-          if ($cer) { Copy-Item $cer.FullName stage -Force } else { Write-Host 'PERINGATAN: .cer tidak ditemukan' }
+          if ($cer) { Copy-Item $cer.FullName stage -Force } else { throw 'package.cer tidak ditemukan' }
           $dev = Get-ChildItem driver\packages -Recurse -Filter devcon.exe | Where-Object { $_.FullName -match 'x64' } | Select-Object -First 1
           if ($dev) { Write-Host "devcon dari NuGet: $($dev.FullName)"; Copy-Item $dev.FullName stage -Force } else { Write-Host 'devcon.exe tidak ada di paket NuGet' }
           Get-ChildItem stage -Recurse | ForEach-Object { '{0}  {1}' -f $_.FullName, $_.Length }

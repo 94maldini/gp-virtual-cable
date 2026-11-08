@@ -1,3 +1,9 @@
+;
+; GPVirtualCable.inx -- template untuk python -m gpcable.codegen (sumber: cables.toml).
+; Dibangun dari SimpleAudioSample.inx (Microsoft audio/simpleaudiosample, MS-PL).
+; Placeholder (INTERFACE_SECTIONS, ADD_INTERFACES, STRINGS) diganti generator;
+; file hasil: driver\Source\Main\GPVirtualCable.inx (di-commit, jangan diedit manual).
+;
 [Version]
 Signature   = "$Windows NT$"
 Class       = MEDIA
@@ -5,29 +11,111 @@ Provider    = %ProviderName%
 ClassGUID   = {4d36e96c-e325-11ce-bfc1-08002be10318}
 DriverVer   = 02/22/2016, 1.0.0.1
 CatalogFile = GPVirtualCable.cat
-PnpLockdown = 1
+PnpLockDown = 1
+
+[SourceDisksNames]
+222=%DiskName%,"",222
+
+[SourceDisksFiles]
+GPVirtualCable.sys=222
+
+[SignatureAttributes]
+GPVirtualCable.sys=SignatureAttributes.DRM
+
+[SignatureAttributes.DRM]
+DRMLevel=1300
+
+[SignatureAttributes.PETrust]
+PETrust=true
 
 [Manufacturer]
-%MfgName% = GPVIRTUALCABLE,NT$ARCH$.10.0...19041
+%MfgName%=GPVIRTUALCABLE,NT$ARCH$.10.0...19041
 
 [GPVIRTUALCABLE.NT$ARCH$.10.0...19041]
-%GPVirtualCable.DeviceDesc% = GPVirtualCable_SA, Root\GPVirtualCable
+%GPVirtualCable_SA.DeviceDesc%=GPVirtualCable_SA, Root\GPVirtualCable
 
-;======================================================
-; per-cable interface sections (generated)
-;======================================================
-@@INTERFACE_SECTIONS@@
+[DestinationDirs]
+GPVirtualCable_SA.CopyList=13 ; 13=Package's DriverStore directory
 
 ;======================================================
 ; GPVirtualCable_SA
 ;======================================================
+[GPVirtualCable_SA.CopyList]
+GPVirtualCable.sys
+
+[GPVirtualCable_SA.AddReg]
+HKR,,AssociatedFilters,,"wdmaud,swmidi,redbook"
+HKR,,Driver,,GPVirtualCable.sys
+
+;
+; Power management settings (from the sample).
+;
+HKR,PowerSettings,SingleComponentMultiFxStates,3,1,0,0,0  ; Turn on multi Fx support.
+HKR,PowerSettings,ConservationIdleTime,3,3,0,0,0          ; 3 seconds for idle power management when on battery
+HKR,PowerSettings,PerformanceIdleTime,3,3,0,0,0           ; 3 seconds for idle power management when on AC power
+HKR,PowerSettings,IdlePowerState,3,3,0,0,0                ; go to D3 for idle power management
+
+HKR,Drivers,SubClasses,,"wave,midi,mixer"
+
+HKR,Drivers\wave\wdmaud.drv,Driver,,wdmaud.drv
+HKR,Drivers\midi\wdmaud.drv,Driver,,wdmaud.drv
+HKR,Drivers\mixer\wdmaud.drv,Driver,,wdmaud.drv
+
+HKR,Drivers\wave\wdmaud.drv,Description,,%GPVirtualCable_SA.DeviceDesc%
+HKR,Drivers\mixer\wdmaud.drv,Description,,%GPVirtualCable_SA.DeviceDesc%
+
+;======================================================
+; Per-endpoint interface sections (generated: 12 render + 1 capture)
+;======================================================
+@@INTERFACE_SECTIONS@@
+
+;======================================================
+; GPVirtualCable_SA install
+;======================================================
 [GPVirtualCable_SA.NT]
 Include=ks.inf,wdmaudio.inf
 Needs=KS.Registration, WDMAUDIO.Registration
+CopyFiles=GPVirtualCable_SA.CopyList
+AddReg=GPVirtualCable_SA.AddReg
 
 [GPVirtualCable_SA.NT.Interfaces]
+;
+; Interfaces per endpoint (generated). Wave filter: KSCATEGORY_AUDIO + RENDER/CAPTURE + REALTIME;
+; topology filter: KSCATEGORY_AUDIO + KSCATEGORY_TOPOLOGY.
+;
 @@ADD_INTERFACES@@
 
+[GPVirtualCable_SA.NT.Services]
+AddService=GPVirtualCable,0x00000002,GPVirtualCable_Service_Inst
+
+[GPVirtualCable_Service_Inst]
+DisplayName=%GPVirtualCable.SvcDesc%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%13%\GPVirtualCable.sys
+
+[GPVirtualCable_SA.NT.HW]
+AddReg = AUDIOHW.AddReg
+
+[AUDIOHW.AddReg]
+; FILE_DEVICE_SOUND
+HKR,,DeviceType,0x10001,0x0000001D
+; SDDL_DEVOBJ_SYS_ALL_ADM_RWX_WORLD_RWX_RES_RWX
+HKR,,Security,,"D:P(A;;GA;;;SY)(A;;GRGWGX;;;BA)(A;;GRGWGX;;;WD)(A;;GRGWGX;;;RC)"
+
+;======================================================
+; WDF
+;======================================================
+[GPVirtualCable_SA.NT.Wdf]
+KmdfService = GPVirtualCable, GPVirtualCable_SA_WdfSect
+
+[GPVirtualCable_SA_WdfSect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+;======================================================
+; COMMON
+;======================================================
 [Strings]
 
 ;Non-localizable
@@ -46,9 +134,12 @@ PKEY_AudioEndpoint_Supports_EventDriven_Mode = "{1DA5D803-D492-4EDD-8C23-E0C0FFE
 
 ;Localizable
 
-ProviderName = "GP"
-MfgName      = "GP"
-GPVirtualCable.DeviceDesc = "GP Virtual Cable"
+ProviderName = "GP Virtual Cable"
+MfgName      = "GP Virtual Cable"
+DiskName     = "GP Virtual Cable Driver Disk"
 
-;; generated strings
+GPVirtualCable_SA.DeviceDesc = "GP Virtual Cable"
+GPVirtualCable.SvcDesc       = "GP Virtual Cable Driver"
+
+;; KS names and friendly names per endpoint (generated)
 @@STRINGS@@

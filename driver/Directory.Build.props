@@ -1,4 +1,12 @@
 <Project>
+<!--
+  GP Virtual Cable: target Windows 10 build 19041 (NTDDI 0x0A000008) untuk semua konfigurasi, juga
+  bila solusi dibuka di Visual Studio (WDK memakai properti ini bila belum diisi; lihat
+  Windows Kits\10\build\<ver>\WindowsDriver.OS.Props).
+-->
+<PropertyGroup>
+  <_NT_TARGET_VERSION>0x0A000008</_NT_TARGET_VERSION>
+</PropertyGroup>
 <!-- Hanya x64. Pola sama dengan Directory.Build.props di microsoft/Windows-driver-samples. -->
 <Import Project="packages\Microsoft.Windows.WDK.x64.10.0.28000.2526\build\native\Microsoft.Windows.WDK.x64.props" Condition="Exists('packages\Microsoft.Windows.WDK.x64.10.0.28000.2526\build\native\Microsoft.Windows.WDK.x64.props') and '$(Platform)' == 'x64'"/>
 <Import Project="packages\Microsoft.Windows.SDK.CPP.x64.10.0.28000.2526\build\native\Microsoft.Windows.SDK.cpp.x64.props" Condition="Exists('packages\Microsoft.Windows.SDK.CPP.x64.10.0.28000.2526\build\native\Microsoft.Windows.SDK.cpp.x64.props') and '$(Platform)' == 'x64'"/>

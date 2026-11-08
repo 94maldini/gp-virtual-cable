@@ -1,0 +1,480 @@
+;
+; GPVirtualCable.inx -- template untuk python -m gpcable.codegen (sumber: cables.toml).
+; Dibangun dari SimpleAudioSample.inx (Microsoft audio/simpleaudiosample, MS-PL).
+; Placeholder (INTERFACE_SECTIONS, ADD_INTERFACES, STRINGS) diganti generator;
+; file hasil: driver\Source\Main\GPVirtualCable.inx (di-commit, jangan diedit manual).
+;
+[Version]
+Signature   = "$Windows NT$"
+Class       = MEDIA
+Provider    = %ProviderName%
+ClassGUID   = {4d36e96c-e325-11ce-bfc1-08002be10318}
+DriverVer   = 02/22/2016, 1.0.0.1
+CatalogFile = GPVirtualCable.cat
+PnpLockDown = 1
+
+[SourceDisksNames]
+222=%DiskName%,"",222
+
+[SourceDisksFiles]
+GPVirtualCable.sys=222
+
+[SignatureAttributes]
+GPVirtualCable.sys=SignatureAttributes.DRM
+
+[SignatureAttributes.DRM]
+DRMLevel=1300
+
+[SignatureAttributes.PETrust]
+PETrust=true
+
+[Manufacturer]
+%MfgName%=GPVIRTUALCABLE,NT$ARCH$.10.0...19041
+
+[GPVIRTUALCABLE.NT$ARCH$.10.0...19041]
+%GPVirtualCable_SA.DeviceDesc%=GPVirtualCable_SA, Root\GPVirtualCable
+
+[DestinationDirs]
+GPVirtualCable_SA.CopyList=13 ; 13=Package's DriverStore directory
+
+;======================================================
+; GPVirtualCable_SA
+;======================================================
+[GPVirtualCable_SA.CopyList]
+GPVirtualCable.sys
+
+[GPVirtualCable_SA.AddReg]
+HKR,,AssociatedFilters,,"wdmaud,swmidi,redbook"
+HKR,,Driver,,GPVirtualCable.sys
+
+;
+; Power management settings (from the sample).
+;
+HKR,PowerSettings,SingleComponentMultiFxStates,3,1,0,0,0  ; Turn on multi Fx support.
+HKR,PowerSettings,ConservationIdleTime,3,3,0,0,0          ; 3 seconds for idle power management when on battery
+HKR,PowerSettings,PerformanceIdleTime,3,3,0,0,0           ; 3 seconds for idle power management when on AC power
+HKR,PowerSettings,IdlePowerState,3,3,0,0,0                ; go to D3 for idle power management
+
+HKR,Drivers,SubClasses,,"wave,midi,mixer"
+
+HKR,Drivers\wave\wdmaud.drv,Driver,,wdmaud.drv
+HKR,Drivers\midi\wdmaud.drv,Driver,,wdmaud.drv
+HKR,Drivers\mixer\wdmaud.drv,Driver,,wdmaud.drv
+
+HKR,Drivers\wave\wdmaud.drv,Description,,%GPVirtualCable_SA.DeviceDesc%
+HKR,Drivers\mixer\wdmaud.drv,Description,,%GPVirtualCable_SA.DeviceDesc%
+
+;======================================================
+; Per-endpoint interface sections (generated: 12 render + 1 capture)
+;======================================================
+[GP.I.WaveRenderMono1]
+AddReg=GP.I.WaveRenderMono1.AddReg
+
+[GP.I.WaveRenderMono1.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono1_Name%
+
+[GP.I.TopoRenderMono1]
+AddReg=GP.I.TopoRenderMono1.AddReg
+
+[GP.I.TopoRenderMono1.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono1_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderMono2]
+AddReg=GP.I.WaveRenderMono2.AddReg
+
+[GP.I.WaveRenderMono2.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono2_Name%
+
+[GP.I.TopoRenderMono2]
+AddReg=GP.I.TopoRenderMono2.AddReg
+
+[GP.I.TopoRenderMono2.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono2_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderMono3]
+AddReg=GP.I.WaveRenderMono3.AddReg
+
+[GP.I.WaveRenderMono3.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono3_Name%
+
+[GP.I.TopoRenderMono3]
+AddReg=GP.I.TopoRenderMono3.AddReg
+
+[GP.I.TopoRenderMono3.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono3_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderMono4]
+AddReg=GP.I.WaveRenderMono4.AddReg
+
+[GP.I.WaveRenderMono4.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono4_Name%
+
+[GP.I.TopoRenderMono4]
+AddReg=GP.I.TopoRenderMono4.AddReg
+
+[GP.I.TopoRenderMono4.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono4_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderMono5]
+AddReg=GP.I.WaveRenderMono5.AddReg
+
+[GP.I.WaveRenderMono5.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono5_Name%
+
+[GP.I.TopoRenderMono5]
+AddReg=GP.I.TopoRenderMono5.AddReg
+
+[GP.I.TopoRenderMono5.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono5_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderMono6]
+AddReg=GP.I.WaveRenderMono6.AddReg
+
+[GP.I.WaveRenderMono6.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono6_Name%
+
+[GP.I.TopoRenderMono6]
+AddReg=GP.I.TopoRenderMono6.AddReg
+
+[GP.I.TopoRenderMono6.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono6_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderMono7]
+AddReg=GP.I.WaveRenderMono7.AddReg
+
+[GP.I.WaveRenderMono7.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono7_Name%
+
+[GP.I.TopoRenderMono7]
+AddReg=GP.I.TopoRenderMono7.AddReg
+
+[GP.I.TopoRenderMono7.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono7_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderMono8]
+AddReg=GP.I.WaveRenderMono8.AddReg
+
+[GP.I.WaveRenderMono8.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono8_Name%
+
+[GP.I.TopoRenderMono8]
+AddReg=GP.I.TopoRenderMono8.AddReg
+
+[GP.I.TopoRenderMono8.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Mono8_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderStereo1]
+AddReg=GP.I.WaveRenderStereo1.AddReg
+
+[GP.I.WaveRenderStereo1.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Stereo1_Name%
+
+[GP.I.TopoRenderStereo1]
+AddReg=GP.I.TopoRenderStereo1.AddReg
+
+[GP.I.TopoRenderStereo1.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Stereo1_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderStereo2]
+AddReg=GP.I.WaveRenderStereo2.AddReg
+
+[GP.I.WaveRenderStereo2.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Stereo2_Name%
+
+[GP.I.TopoRenderStereo2]
+AddReg=GP.I.TopoRenderStereo2.AddReg
+
+[GP.I.TopoRenderStereo2.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Stereo2_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderStereo3]
+AddReg=GP.I.WaveRenderStereo3.AddReg
+
+[GP.I.WaveRenderStereo3.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Stereo3_Name%
+
+[GP.I.TopoRenderStereo3]
+AddReg=GP.I.TopoRenderStereo3.AddReg
+
+[GP.I.TopoRenderStereo3.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Stereo3_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveRenderStereo4]
+AddReg=GP.I.WaveRenderStereo4.AddReg
+
+[GP.I.WaveRenderStereo4.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Stereo4_Name%
+
+[GP.I.TopoRenderStereo4]
+AddReg=GP.I.TopoRenderStereo4.AddReg
+
+[GP.I.TopoRenderStereo4.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Stereo4_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+[GP.I.WaveCapture]
+AddReg=GP.I.WaveCapture.AddReg
+
+[GP.I.WaveCapture.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Capture_Name%
+
+[GP.I.TopoCapture]
+AddReg=GP.I.TopoCapture.AddReg
+
+[GP.I.TopoCapture.AddReg]
+HKR,,CLSID,,%Proxy.CLSID%
+HKR,,FriendlyName,,%GP_Capture_Name%
+HKR,EP\0,%PKEY_AudioEndpoint_Association%,,%KSNODETYPE_ANY%
+HKR,EP\0,%PKEY_AudioEndpoint_Supports_EventDriven_Mode%,0x00010001,0x1
+
+
+;======================================================
+; GPVirtualCable_SA install
+;======================================================
+[GPVirtualCable_SA.NT]
+Include=ks.inf,wdmaudio.inf
+Needs=KS.Registration, WDMAUDIO.Registration
+CopyFiles=GPVirtualCable_SA.CopyList
+AddReg=GPVirtualCable_SA.AddReg
+
+[GPVirtualCable_SA.NT.Interfaces]
+;
+; Interfaces per endpoint (generated). Wave filter: KSCATEGORY_AUDIO + RENDER/CAPTURE + REALTIME;
+; topology filter: KSCATEGORY_AUDIO + KSCATEGORY_TOPOLOGY.
+;
+; Mono1 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderMono1%, GP.I.WaveRenderMono1
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderMono1%, GP.I.WaveRenderMono1
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderMono1%, GP.I.WaveRenderMono1
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderMono1%, GP.I.TopoRenderMono1
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderMono1%, GP.I.TopoRenderMono1
+
+; Mono2 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderMono2%, GP.I.WaveRenderMono2
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderMono2%, GP.I.WaveRenderMono2
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderMono2%, GP.I.WaveRenderMono2
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderMono2%, GP.I.TopoRenderMono2
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderMono2%, GP.I.TopoRenderMono2
+
+; Mono3 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderMono3%, GP.I.WaveRenderMono3
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderMono3%, GP.I.WaveRenderMono3
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderMono3%, GP.I.WaveRenderMono3
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderMono3%, GP.I.TopoRenderMono3
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderMono3%, GP.I.TopoRenderMono3
+
+; Mono4 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderMono4%, GP.I.WaveRenderMono4
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderMono4%, GP.I.WaveRenderMono4
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderMono4%, GP.I.WaveRenderMono4
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderMono4%, GP.I.TopoRenderMono4
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderMono4%, GP.I.TopoRenderMono4
+
+; Mono5 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderMono5%, GP.I.WaveRenderMono5
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderMono5%, GP.I.WaveRenderMono5
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderMono5%, GP.I.WaveRenderMono5
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderMono5%, GP.I.TopoRenderMono5
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderMono5%, GP.I.TopoRenderMono5
+
+; Mono6 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderMono6%, GP.I.WaveRenderMono6
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderMono6%, GP.I.WaveRenderMono6
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderMono6%, GP.I.WaveRenderMono6
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderMono6%, GP.I.TopoRenderMono6
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderMono6%, GP.I.TopoRenderMono6
+
+; Mono7 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderMono7%, GP.I.WaveRenderMono7
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderMono7%, GP.I.WaveRenderMono7
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderMono7%, GP.I.WaveRenderMono7
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderMono7%, GP.I.TopoRenderMono7
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderMono7%, GP.I.TopoRenderMono7
+
+; Mono8 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderMono8%, GP.I.WaveRenderMono8
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderMono8%, GP.I.WaveRenderMono8
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderMono8%, GP.I.WaveRenderMono8
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderMono8%, GP.I.TopoRenderMono8
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderMono8%, GP.I.TopoRenderMono8
+
+; Stereo1 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderStereo1%, GP.I.WaveRenderStereo1
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderStereo1%, GP.I.WaveRenderStereo1
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderStereo1%, GP.I.WaveRenderStereo1
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderStereo1%, GP.I.TopoRenderStereo1
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderStereo1%, GP.I.TopoRenderStereo1
+
+; Stereo2 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderStereo2%, GP.I.WaveRenderStereo2
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderStereo2%, GP.I.WaveRenderStereo2
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderStereo2%, GP.I.WaveRenderStereo2
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderStereo2%, GP.I.TopoRenderStereo2
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderStereo2%, GP.I.TopoRenderStereo2
+
+; Stereo3 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderStereo3%, GP.I.WaveRenderStereo3
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderStereo3%, GP.I.WaveRenderStereo3
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderStereo3%, GP.I.WaveRenderStereo3
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderStereo3%, GP.I.TopoRenderStereo3
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderStereo3%, GP.I.TopoRenderStereo3
+
+; Stereo4 render
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveRenderStereo4%, GP.I.WaveRenderStereo4
+AddInterface=%KSCATEGORY_RENDER%, %KSNAME_WaveRenderStereo4%, GP.I.WaveRenderStereo4
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveRenderStereo4%, GP.I.WaveRenderStereo4
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoRenderStereo4%, GP.I.TopoRenderStereo4
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoRenderStereo4%, GP.I.TopoRenderStereo4
+
+; capture
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_WaveCapture%, GP.I.WaveCapture
+AddInterface=%KSCATEGORY_CAPTURE%, %KSNAME_WaveCapture%, GP.I.WaveCapture
+AddInterface=%KSCATEGORY_REALTIME%, %KSNAME_WaveCapture%, GP.I.WaveCapture
+AddInterface=%KSCATEGORY_AUDIO%, %KSNAME_TopoCapture%, GP.I.TopoCapture
+AddInterface=%KSCATEGORY_TOPOLOGY%, %KSNAME_TopoCapture%, GP.I.TopoCapture
+
+
+[GPVirtualCable_SA.NT.Services]
+AddService=GPVirtualCable,0x00000002,GPVirtualCable_Service_Inst
+
+[GPVirtualCable_Service_Inst]
+DisplayName=%GPVirtualCable.SvcDesc%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%13%\GPVirtualCable.sys
+
+[GPVirtualCable_SA.NT.HW]
+AddReg = AUDIOHW.AddReg
+
+[AUDIOHW.AddReg]
+; FILE_DEVICE_SOUND
+HKR,,DeviceType,0x10001,0x0000001D
+; SDDL_DEVOBJ_SYS_ALL_ADM_RWX_WORLD_RWX_RES_RWX
+HKR,,Security,,"D:P(A;;GA;;;SY)(A;;GRGWGX;;;BA)(A;;GRGWGX;;;WD)(A;;GRGWGX;;;RC)"
+
+;======================================================
+; WDF
+;======================================================
+[GPVirtualCable_SA.NT.Wdf]
+KmdfService = GPVirtualCable, GPVirtualCable_SA_WdfSect
+
+[GPVirtualCable_SA_WdfSect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+;======================================================
+; COMMON
+;======================================================
+[Strings]
+
+;Non-localizable
+
+Proxy.CLSID="{17CCA71B-ECD7-11D0-B908-00A0C9223196}"
+KSCATEGORY_AUDIO="{6994AD04-93EF-11D0-A3CC-00A0C9223196}"
+KSCATEGORY_RENDER="{65E8773E-8F56-11D0-A3B9-00A0C9223196}"
+KSCATEGORY_CAPTURE="{65E8773D-8F56-11D0-A3B9-00A0C9223196}"
+KSCATEGORY_REALTIME ="{EB115FFC-10C8-4964-831D-6DCB02E6F23F}"
+KSCATEGORY_TOPOLOGY = "{DDA54A40-1E4C-11D1-A050-405705C10000}"
+
+KSNODETYPE_ANY   = "{00000000-0000-0000-0000-000000000000}"
+
+PKEY_AudioEndpoint_Association               = "{1DA5D803-D492-4EDD-8C23-E0C0FFEE7F0E},2"
+PKEY_AudioEndpoint_Supports_EventDriven_Mode = "{1DA5D803-D492-4EDD-8C23-E0C0FFEE7F0E},7"
+
+;Localizable
+
+ProviderName = "GP Virtual Cable"
+MfgName      = "GP Virtual Cable"
+DiskName     = "GP Virtual Cable Driver Disk"
+
+GPVirtualCable_SA.DeviceDesc = "GP Virtual Cable"
+GPVirtualCable.SvcDesc       = "GP Virtual Cable Driver"
+
+;; KS names and friendly names per endpoint (generated)
+KSNAME_WaveRenderMono1="WaveRenderMono1"
+KSNAME_TopoRenderMono1="TopoRenderMono1"
+GP_Mono1_Name="GP Mono 1"
+KSNAME_WaveRenderMono2="WaveRenderMono2"
+KSNAME_TopoRenderMono2="TopoRenderMono2"
+GP_Mono2_Name="GP Mono 2"
+KSNAME_WaveRenderMono3="WaveRenderMono3"
+KSNAME_TopoRenderMono3="TopoRenderMono3"
+GP_Mono3_Name="GP Mono 3"
+KSNAME_WaveRenderMono4="WaveRenderMono4"
+KSNAME_TopoRenderMono4="TopoRenderMono4"
+GP_Mono4_Name="GP Mono 4"
+KSNAME_WaveRenderMono5="WaveRenderMono5"
+KSNAME_TopoRenderMono5="TopoRenderMono5"
+GP_Mono5_Name="GP Mono 5"
+KSNAME_WaveRenderMono6="WaveRenderMono6"
+KSNAME_TopoRenderMono6="TopoRenderMono6"
+GP_Mono6_Name="GP Mono 6"
+KSNAME_WaveRenderMono7="WaveRenderMono7"
+KSNAME_TopoRenderMono7="TopoRenderMono7"
+GP_Mono7_Name="GP Mono 7"
+KSNAME_WaveRenderMono8="WaveRenderMono8"
+KSNAME_TopoRenderMono8="TopoRenderMono8"
+GP_Mono8_Name="GP Mono 8"
+KSNAME_WaveRenderStereo1="WaveRenderStereo1"
+KSNAME_TopoRenderStereo1="TopoRenderStereo1"
+GP_Stereo1_Name="GP Stereo 1"
+KSNAME_WaveRenderStereo2="WaveRenderStereo2"
+KSNAME_TopoRenderStereo2="TopoRenderStereo2"
+GP_Stereo2_Name="GP Stereo 2"
+KSNAME_WaveRenderStereo3="WaveRenderStereo3"
+KSNAME_TopoRenderStereo3="TopoRenderStereo3"
+GP_Stereo3_Name="GP Stereo 3"
+KSNAME_WaveRenderStereo4="WaveRenderStereo4"
+KSNAME_TopoRenderStereo4="TopoRenderStereo4"
+GP_Stereo4_Name="GP Stereo 4"
+KSNAME_WaveCapture="WaveCapture"
+KSNAME_TopoCapture="TopoCapture"
+GP_Capture_Name="GP Virtual Cable"

@@ -18,7 +18,7 @@ Abstract:
 #include "endpoints.h"
 #include "minwavert.h"
 #include "minwavertstream.h"
-#include "micarraywavtable.h"
+#include "cablewavtable.h"
 
 #define EFFECTS_LIST_COUNT 2
 
@@ -221,10 +221,50 @@ Arguments:
         return STATUS_NOT_IMPLEMENTED;
     }
 
-    //If called for the mic array pin, set ResultantFormat to be the endpoint's only supported format.
-    //Otherwise, allow the class handler to set ResultantFormat.  
-    if ((this->m_DeviceType) == eMicArrayDevice1)
+    //
+    // GP Virtual Cable capture: setiap data range punya satu lebar sampel (16, 24 atau 32 bit
+    // container). ResultantFormat adalah format WAVEFORMATEXTENSIBLE (8 ch, 7.1 surround) yang
+    // cocok dengan range itu, bila range klien mencakupnya. Render: class handler.
+    //
+    if ((this->m_DeviceType) == eCableCaptureDevice)
     {
+        PKSDATARANGE_AUDIO myRange = (PKSDATARANGE_AUDIO)MyDataRange;
+        PKSDATAFORMAT_WAVEFORMATEXTENSIBLE matchFormat = NULL;
+
+        if (MyDataRange->FormatSize < sizeof(KSDATARANGE_AUDIO))
+        {
+            return STATUS_NO_MATCH;
+        }
+
+        for (ULONG i = 0; i < SIZEOF_ARRAY(CableCaptureDeviceFormats); i++)
+        {
+            if (CableCaptureDeviceFormats[i].WaveFormatExt.Format.wBitsPerSample == myRange->MaximumBitsPerSample)
+            {
+                matchFormat = &CableCaptureDeviceFormats[i];
+                break;
+            }
+        }
+        if (matchFormat == NULL)
+        {
+            return STATUS_NO_MATCH;
+        }
+
+        if (ClientDataRange->FormatSize >= sizeof(KSDATARANGE_AUDIO))
+        {
+            PKSDATARANGE_AUDIO clientRange = (PKSDATARANGE_AUDIO)ClientDataRange;
+            ULONG bits = matchFormat->WaveFormatExt.Format.wBitsPerSample;
+            ULONG rate = matchFormat->WaveFormatExt.Format.nSamplesPerSec;
+
+            if (clientRange->MaximumChannels < matchFormat->WaveFormatExt.Format.nChannels ||
+                clientRange->MinimumBitsPerSample > bits ||
+                clientRange->MaximumBitsPerSample < bits ||
+                clientRange->MinimumSampleFrequency > rate ||
+                clientRange->MaximumSampleFrequency < rate)
+            {
+                return STATUS_NO_MATCH;
+            }
+        }
+
         requiredSize = sizeof(KSDATAFORMAT_WAVEFORMATEXTENSIBLE);
 
         //
@@ -242,10 +282,14 @@ Arguments:
             return STATUS_BUFFER_TOO_SMALL;
         }
 
-        //Set ResultantFormat to be the only supported format for the MicArray endpoint. 
+        if (ResultantFormat == NULL)
+        {
+            return STATUS_INVALID_PARAMETER;
+        }
+
         PKSDATAFORMAT_WAVEFORMATEXTENSIBLE resultantFormat;
         resultantFormat = (PKSDATAFORMAT_WAVEFORMATEXTENSIBLE)ResultantFormat;
-        *resultantFormat = *MicArrayPinSupportedDeviceFormats;
+        *resultantFormat = *matchFormat;
         *ResultantFormatLength = requiredSize;
 
         return STATUS_SUCCESS;

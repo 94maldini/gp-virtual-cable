@@ -14,8 +14,7 @@ Abstract:
 #ifndef _SIMPLEAUDIOSAMPLE_MINWAVERTSTREAM_H_
 #define _SIMPLEAUDIOSAMPLE_MINWAVERTSTREAM_H_
 
-#include "savedata.h"
-#include "ToneGenerator.h"
+#include "CableBuffer.h"
 
 //
 // Structure to store notifications events in a protected list
@@ -111,23 +110,27 @@ protected:
     PLONG                       m_plPeakMeter;
     PWAVEFORMATEXTENSIBLE       m_pWfExt;
     ULONG                       m_ulContentId;
-    CSaveData                   m_SaveData;
-    ToneGenerator               m_ToneGenerator;
     GUID                        m_SignalProcessingMode;
     BOOLEAN                     m_bEoSReceived;
     BOOLEAN                     m_bLastBufferRendered;
     KSPIN_LOCK                  m_PositionSpinLock;
-    // Member variable as config params for tone generator
-    ULONG                       m_ulHostCaptureToneFrequency;
-    // If abs(m_dwHostCaptureToneAmplitude) + abs(m_dwHostCaptureToneDCValue) > 100
-    // m_dwHostCaptureToneDCValue will be compensated to make the sum equal to 100
-    DWORD                       m_dwHostCaptureToneAmplitude;   // must be between -100 to 100
-    DWORD                       m_dwLoopbackCaptureToneAmplitude; // must be between -100 to 100
-    DWORD                       m_dwHostCaptureToneDCOffset;   // must be between -100 to 100
-    DWORD                       m_dwLoopbackCaptureToneDCOffset; // must be between -100 to 100
-    DWORD                       m_dwHostCaptureToneInitialPhase;   // must be between -31416 to 31416
-    DWORD                       m_dwLoopbackCaptureToneInitialPhase; // must be between -31416 to 31416
-    // Member variable as config params for tone generator
+
+    // GP Virtual Cable. Diisi di Init (sebelum stream berjalan); selama berjalan hanya disentuh di
+    // bawah m_PositionSpinLock (UpdatePosition, SetState STOP), kecuali m_bGpCopyProtect yang
+    // ditulis SetContentId (satu BOOLEAN; DPC membacanya apa adanya).
+    ULONG                       m_ulGpCableIndex = MAXULONG;    // render: indeks cable; capture: GP_CAPTURE_CABLE_INDEX
+    ULONG                       m_ulGpFrameBytes = 0;   // nBlockAlign format stream
+    ULONG                       m_ulGpBitsPerSample = 0;    // capture: 16, 24 atau 32 (container)
+    BOOLEAN                     m_bGpCopyProtect = FALSE;   // render: konten DRM CopyProtect tidak diteruskan
+    // Sisa frame parsial agar aliran byte DMA tetap bersambung dan selaras frame:
+    //  render : m_ulGpCarryBytes byte awal frame yang belum lengkap (belum ditulis ke ring).
+    //  capture: frame yang sudah dicampur di m_GpCarry; byte [m_ulGpCarryOffset, +m_ulGpCarryBytes)
+    //           belum ditulis ke buffer DMA.
+    BYTE                        m_GpCarry[GP_MIX_CHANNELS * sizeof(LONG)] = {};
+    ULONG                       m_ulGpCarryBytes = 0;
+    ULONG                       m_ulGpCarryOffset = 0;
+    LONG*                       m_plGpAccumulator = NULL;   // capture: LONG[GP_MIX_CHUNK_FRAMES * GP_MIX_CHANNELS]
+    BYTE*                       m_pGpScratch = NULL;    // capture: GP_MIX_SCRATCH_BYTES_PER_CABLE per cable
 
 public:
 
@@ -170,6 +173,26 @@ private:
     (
         _In_ ULONG ByteDisplacement
     );
+
+    VOID GpMixFrames
+    (
+        _In_ ULONG Frames,
+        _Out_writes_bytes_(Frames * m_ulGpFrameBytes) BYTE* Destination
+    );
+
+    VOID GpCopyToDma
+    (
+        _In_ ULONG Offset,
+        _In_reads_bytes_(Count) const BYTE* Source,
+        _In_ ULONG Count
+    );
+
+    VOID GpCopyFromDma
+    (
+        _Out_writes_bytes_(Count) BYTE* Destination,
+        _In_ ULONG Offset,
+        _In_ ULONG Count
+    );
     
     VOID UpdatePosition
     (
@@ -188,8 +211,6 @@ private:
         _Out_opt_  LARGE_INTEGER *  _pliQPCTime
     );
 
-    NTSTATUS ReadRegistrySettings();
-    
 };
 typedef CMiniportWaveRTStream *PCMiniportWaveRTStream;
 #endif // _SIMPLEAUDIOSAMPLE_MINWAVERTSTREAM_H_
