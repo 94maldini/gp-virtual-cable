@@ -22,7 +22,7 @@ if (Test-Path -LiteralPath $kitRoot) { Remove-Item -LiteralPath $kitRoot -Recurs
 New-Item -ItemType Directory -Force (Join-Path $kit 'driver'), (Join-Path $kit 'tools') | Out-Null
 
 foreach ($f in $files) { Copy-Item (Join-Path $driverSrc $f) (Join-Path $kit 'driver') }
-foreach ($f in 'enable-testsigning.ps1', 'install.ps1', 'uninstall.ps1', 'common.ps1') {
+foreach ($f in 'enable-testsigning.ps1', 'install.ps1', 'uninstall.ps1', 'common.ps1', 'diagnose-endpoints.ps1') {
     Copy-Item (Join-Path $PSScriptRoot $f) (Join-Path $kit 'tools')
 }
 Copy-Item (Join-Path $root 'cables.toml') $kit
