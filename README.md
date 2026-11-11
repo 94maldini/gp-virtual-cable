@@ -69,7 +69,7 @@ Sebelum mulai, ambil **snapshot VMware**; bila VM gagal boot, kembalikan ke snap
    .\tools\install.ps1
    ```
    Tanpa `-PackageDir`, skrip memakai folder `driver\` di samping `tools\`. Opsi: `-PackageDir`, `-CertPath`, `-DevconPath`.
-4. Buka `mmsys.cpl`. Harus ada **12 Playback**: "GP Mono 1".."GP Mono 8", "GP Stereo 1".."GP Stereo 4", dan **1 Recording "GP Virtual Cable"** (8 channel). Bila namanya tampil sebagai "Speakers" / "Microphone Array", **laporkan** (lihat Troubleshooting).
+4. Buka `mmsys.cpl`. Harus ada **12 Playback**: "GP Mono 1".."GP Mono 8", "GP Stereo 1".."GP Stereo 4" (tampil sebagai mis. "GP Mono 1 (GP Virtual Cable)", jenis Line), dan **1 Recording "GP Virtual Cable"** (8 channel). Cek cepat: `Get-PnpDevice -Class AudioEndpoint | Format-Table Status,FriendlyName`. Bila Playback tampil "Speakers (GP Virtual Cable)", lihat Troubleshooting; untuk versi driver baru di VM, selalu mulai dari snapshot **sebelum** pemasangan pertama.
 5. Pasang Python 3.11+ (python.org, centang "Add to PATH"), lalu di jendela PowerShell baru:
    ```powershell
    cd C:\...\GPVirtualCable-kit
@@ -141,7 +141,12 @@ Boot ke Safe Mode / Startup Settings (tahan Shift saat Restart), lalu jalankan `
 
 ## Troubleshooting
 
-- **Nama tampil "Speakers" / "Microphone Array"**: laporkan. Fallback: ubah kategori di `driver/Source/Filters/cabletoptable.h`.
+- **Playback tampil "Speakers (GP Virtual Cable)"**: Windows selalu menamai endpoint berkategori *speaker* "Speakers" dan mengabaikan nama dari driver. Sejak fix round 2 kategori Playback adalah Line (`GP_RENDER_BRIDGE_CATEGORY` di `driver/Source/Filters/cabletoptable.h`), jadi nama yang benar "GP Mono 1 (GP Virtual Cable)" dst. Bila masih "Speakers", kemungkinan **nama lama masih tersimpan**:
+  - Windows menyimpan data endpoint di `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Render\{id}`. ID endpoint dibentuk dari reference string filter + ID pin, dan keduanya tidak berubah oleh fix ini. Uninstall driver menghapus setelan pengguna endpoint, tetapi entri endpoint bisa tertinggal (status "not present") dan dipakai lagi saat pasang ulang.
+  - **Di VM:** kembalikan **snapshot yang diambil sebelum pemasangan pertama**, lalu pasang paket baru. Ini cara paling bersih (tanpa sisa sertifikat, driver store, maupun endpoint).
+  - **Tanpa snapshot (PC utama):** jalankan `tools\uninstall.ps1`, **reboot**, pasang paket baru, lalu reboot lagi. Bila masih "Speakers", ganti nama manual (klik kanan endpoint di `mmsys.cpl` -> Properties). Nama manual juga terbaca oleh meter dan loopback karena pencocokan nama memakai kata utuh. Jangan menghapus kunci MMDevices dengan tangan.
+- **Recording tampil "Microphone Array"**: laporkan (nama custom Recording sudah terbukti bekerja di VM).
+- **Playback tidak muncul atau disabled**: di `mmsys.cpl` klik kanan -> "Show Disabled Devices" -> Enable, lalu laporkan.
 - **GP Mix tidak bisa membuka perangkat**: pastikan Sample rate 48000 Hz; tutup aplikasi lain yang memakai perangkat secara Exclusive.
 - **Tidak ada suara di satu channel**: jalankan `python -m gpcable.loopback` dan lihat cable mana yang FAIL.
 - **Suara retak**: perbesar buffer size di GP Mix.

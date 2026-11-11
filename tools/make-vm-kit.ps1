@@ -53,6 +53,8 @@ dan pindah dulu ke folder paket ini, mis.:
     cd C:\...\GPVirtualCable-kit      (ganti dengan lokasi ekstrak yang sebenarnya)
 
 Sebelum mulai: ambil SNAPSHOT VMware. Bila VM gagal boot, kembalikan ke snapshot itu.
+Versi driver baru: kembalikan dulu snapshot SEBELUM pemasangan pertama (Windows dapat menyimpan
+nama endpoint lama seperti "Speakers (GP Virtual Cable)"), lalu ulangi langkah di bawah.
 
 0. VM mati -> VM Settings > Options > Advanced > hapus centang "Enable secure boot".
    Bila BitLocker aktif, SUSPEND dulu sebelum test-signing + reboot:
@@ -62,8 +64,10 @@ Sebelum mulai: ambil SNAPSHOT VMware. Bila VM gagal boot, kembalikan ke snapshot
    .\tools\enable-testsigning.ps1        (lalu REBOOT VM)
 2. (jendela BARU, Admin; ulangi cd + Set-ExecutionPolicy di atas)
    Set-ExecutionPolicy -Scope Process Bypass
-   .\tools\install.ps1                   (lalu cek mmsys.cpl: 12 Playback "GP Mono 1".."GP Stereo 4"
-                                          + 1 Recording "GP Virtual Cable" 8 channel)
+   .\tools\install.ps1                   (lalu cek mmsys.cpl: 12 Playback "GP Mono 1 (GP Virtual Cable)"
+                                          .. "GP Stereo 4 (GP Virtual Cable)" + 1 Recording
+                                          "GP Virtual Cable" 8 channel)
+   Get-PnpDevice -Class AudioEndpoint | Format-Table Status,FriendlyName   (kirim balik keluarannya)
 3. Pasang Python 3.11+ (python.org, centang "Add to PATH"), buka jendela baru, lalu:
    cd C:\...\GPVirtualCable-kit
    pip install -e ".\python[dev]"

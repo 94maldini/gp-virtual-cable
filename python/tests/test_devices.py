@@ -58,3 +58,13 @@ def test_missing_capture_is_none():
     assert res.outputs["Mono1"] == 0
     assert res.outputs["Stereo4"] is None
     assert res.capture is None
+
+
+def test_name_matches_custom_endpoint_name_format():
+    # Format nama setelah fix kategori pin: "<nama pin> (<nama perangkat>)".
+    assert name_matches("GP Mono 1 (GP Virtual Cable)", "GP Mono 1")
+    assert name_matches("GP Stereo 4 (GP Virtual Cable)", "GP Stereo 4")
+    assert name_matches("GP Virtual Cable (GP Virtual Cable)", "GP Virtual Cable")
+    assert not name_matches("GP Mono 1 (GP Virtual Cable)", "GP Mono 2")
+    # Nama lama yang dipaksa Windows tidak boleh dianggap cocok dengan cable mana pun.
+    assert not name_matches("Speakers (GP Virtual Cable)", "GP Mono 1")

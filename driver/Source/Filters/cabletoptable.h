@@ -20,7 +20,19 @@ Abstract:
 #define _GP_CABLETOPTABLE_H_
 
 //
-// Render: KSPIN_TOPO_WAVEOUT_SOURCE (0), KSPIN_TOPO_LINEOUT_DEST (1, bridge, kategori speaker).
+// Kategori pin bridge render, ditetapkan di satu tempat. Windows MENGABAIKAN nama pin (Name GUID)
+// untuk kategori "speaker" (KSNODETYPE_SPEAKER, _DESKTOP_, _ROOM_, _LOW_FREQUENCY_EFFECTS_SPEAKER)
+// dan selalu menamai endpointnya "Speakers". Ini terbukti di VM: muncul 12x "Speakers (GP Virtual Cable)",
+// sedangkan nama custom capture (mic array) dipakai.
+// KSNODETYPE_LINE_CONNECTOR: form factor LineLevel, endpoint aktif (tidak disabled/hidden), konektor
+// Physical_External. VB-Audio "CABLE In 16 Ch" memakai kategori ini dengan nama custom.
+// Fallback (ganti satu baris ini lalu build ulang): KSNODETYPE_SPDIF_INTERFACE (form factor SPDIF).
+// Lihat laporan Task 4, bagian "Fix round 2".
+//
+#define GP_RENDER_BRIDGE_CATEGORY   KSNODETYPE_LINE_CONNECTOR
+
+//
+// Render: KSPIN_TOPO_WAVEOUT_SOURCE (0), KSPIN_TOPO_LINEOUT_DEST (1, bridge, GP_RENDER_BRIDGE_CATEGORY).
 // Menghasilkan GpTopoPins<id>[] dan GpTopoDescriptor<id>.
 //
 #define GP_DEFINE_RENDER_TOPO(id, nameGuid)                                                 \
@@ -50,7 +62,7 @@ PCPIN_DESCRIPTOR GpTopoPins##id[] =                                             
             SpeakerTopoPinDataRangePointersBridge,                                          \
             KSPIN_DATAFLOW_OUT,                                                             \
             KSPIN_COMMUNICATION_NONE,                                                       \
-            &KSNODETYPE_SPEAKER,                                                            \
+            &GP_RENDER_BRIDGE_CATEGORY,                                                            \
             &(nameGuid),                                                                    \
             0                                                                               \
         }                                                                                   \
